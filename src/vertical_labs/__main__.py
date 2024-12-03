@@ -1,78 +1,45 @@
 """Main entry point for Vertical Labs."""
 
 import os
-
 from dotenv import load_dotenv
-
-from .orchestrator import VerticalLabsOrchestrator
-
+from .flow import kickoff, plot
 
 def main():
     """Run the Vertical Labs system."""
     # Load environment variables
     load_dotenv()
 
-    # Example configuration
-    config = {
-        "topics_ai": {
-            "llm": os.getenv("OPENAI_MODEL_NAME", "gpt-4o"),
-            "verbose": True
-        },
-        "pitch_ai": {
-            "llm": os.getenv("OPENAI_MODEL_NAME", "gpt-4o"),
-            "verbose": True
-        },
-        "content_ai": {
-            "llm": os.getenv("OPENAI_MODEL_NAME", "gpt-4o"),
-            "verbose": True
-        }
-    }
-
     # Example inputs
-    inputs = {
-        "publisher_info": {
-            "name": "TechInsights",
-            "url": "https://techinsights.com",
-            "categories": ["Technology", "AI", "Business"],
-            "audience": {
-                "type": "B2B",
-                "roles": ["CTO", "Tech Leaders", "Developers"],
-                "industries": ["Software", "AI/ML", "Enterprise"]
-            },
-            "locations": ["USA", "Canada"],
-            "preferences": {
-                "content_length": "1000-1500 words",
-                "tone": "professional",
-                "style": "analytical",
-                "prefers_brevity": True,
-                "requires_data": True
-            }
-        },
-        "brand_info": {
-            "name": "AI Solutions Inc",
-            "category": "AI/ML",
-            "target_audience": "B2B",
-            "locations": {"USA", "Canada"},
-            "expert_name": "Dr. Sarah Smith",
-            "expert_title": "Chief AI Officer",
-            "unique_value": "Enterprise-grade AI solutions with human-centric design"
-        },
-        "requirements": {
-            "content_types": ["thought_leadership", "technical_analysis"],
-            "delivery_timeline": "2 weeks",
-            "special_requirements": "Include case studies and ROI metrics"
-        }
-    }
+    domain = "Enterprise AI Solutions"
+    target_audience = """
+    B2B audience including CTOs, Tech Leaders, and Developers
+    in Software and AI/ML industries, primarily in USA and Canada.
+    Looking for professional, analytical content with data-backed insights.
+    """
+    content_goals = """
+    Create thought leadership and technical analysis content that:
+    - Demonstrates expertise in enterprise-grade AI solutions
+    - Includes case studies and ROI metrics
+    - Maintains professional tone and analytical style
+    - Targets content length of 1000-1500 words
+    - Emphasizes human-centric design in AI implementations
+    """
 
-    # Create and run orchestrator
-    orchestrator = VerticalLabsOrchestrator(config)
-    results = orchestrator.run_full_pipeline(inputs)
+    # Run the flow
+    results = kickoff(
+        domain=domain,
+        target_audience=target_audience,
+        content_goals=content_goals
+    )
 
     # Print results summary
     print("\nResults Summary:")
-    print(f"Topics Generated: {len(results['topics'].get('topics', []))}")
-    print(f"Pitches Created: {len(results['pitches'].get('pitches', []))}")
-    print(f"Content Pieces: {len(results['content'])}")
+    print(f"Topics Generated: {len(results.topics)}")
+    print(f"Content Pieces: {len(results.content_items)}")
+    print(f"Pitches Created: {len(results.pitches)}")
+
+    # Generate flow visualization
+    plot()
 
 
 if __name__ == "__main__":
