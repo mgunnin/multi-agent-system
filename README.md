@@ -1,12 +1,12 @@
 # Vertical Labs Multi-Agent System
 
-A multi-agentic system using CrewAI for generating topics, creating pitches, and producing content at scale. Features parallel execution, performance monitoring, and results storage.
+A multi-agentic system using CrewAI Flows for generating topics, creating pitches, and producing content at scale. Features sequential and parallel execution, state management, and flow visualization.
 
 ## Overview
 
-The system consists of three interconnected crews:
+The system uses CrewAI Flows to orchestrate three specialized crews in a coordinated workflow:
 
-1. **TopicsAI Crew**
+1. **TopicsAI Crew** (First Stage)
    - Generates relevant topics for publishers
    - Analyzes trends and audience needs
    - Ensures topic diversity and quality
@@ -18,18 +18,8 @@ The system consists of three interconnected crews:
      - Quality Assurer
      - Topic Coordinator
 
-2. **PitchAI Crew**
-   - Creates compelling PR pitches
-   - Matches brands with topics and publishers
-   - Optimizes pitches for success
-   - Agents:
-     - Brand Analyst
-     - Pitch Writer
-     - Media Relations Specialist
-     - Pitch Coordinator
-
-3. **ContentAI Crew**
-   - Produces high-quality content
+2. **ContentAI Crew** (Second Stage)
+   - Produces high-quality content for each topic
    - Ensures editorial standards
    - Optimizes for engagement
    - Agents:
@@ -38,6 +28,35 @@ The system consists of three interconnected crews:
      - Content Editor
      - Content Optimizer
      - Content Coordinator
+
+3. **PitchAI Crew** (Third Stage)
+   - Creates compelling PR pitches for content
+   - Matches content with publishers
+   - Optimizes pitches for success
+   - Agents:
+     - Brand Analyst
+     - Pitch Writer
+     - Media Relations Specialist
+     - Pitch Coordinator
+
+## Flow Architecture
+
+The system uses CrewAI's Flow pattern to manage the interaction between crews:
+
+```mermaid
+graph TD
+    A[TopicsAI Crew] -->|Topics| B[ContentAI Crew]
+    B -->|Content| C[PitchAI Crew]
+    D[State Management] -->|Domain Info| A
+    D -->|Content Goals| B
+    D -->|Target Audience| C
+```
+
+Key Features:
+- Centralized state management using Pydantic models
+- Sequential execution with data dependencies
+- Parallel content generation for multiple topics
+- Flow visualization for monitoring and debugging
 
 ## Configuration
 
@@ -57,42 +76,103 @@ DIFFBOT_API_KEY=your_diffbot_key
 ### Basic Usage
 
 ```python
-from vertical_labs.orchestrator import VerticalLabsOrchestrator
+from vertical_labs.flow import kickoff, plot
 
-# Create configuration
-config = {
-    "topics_ai": {"llm": "gpt-4"},
-    "pitch_ai": {"llm": "gpt-4"},
-    "content_ai": {"llm": "gpt-4"}
-}
+# Define your inputs
+domain = "Enterprise AI Solutions"
+target_audience = """
+    B2B audience including CTOs, Tech Leaders, and Developers
+    in Software and AI/ML industries, primarily in USA and Canada.
+    Looking for professional, analytical content with data-backed insights.
+"""
+content_goals = """
+    Create thought leadership and technical analysis content that:
+    - Demonstrates expertise in enterprise-grade AI solutions
+    - Includes case studies and ROI metrics
+    - Maintains professional tone and analytical style
+    - Targets content length of 1000-1500 words
+    - Emphasizes human-centric design in AI implementations
+"""
 
-# Initialize orchestrator
-orchestrator = VerticalLabsOrchestrator(config)
+# Run the flow
+results = kickoff(
+    domain=domain,
+    target_audience=target_audience,
+    content_goals=content_goals
+)
 
-# Run individual crews
-topics = orchestrator.run_topics_generation(topics_inputs)
-pitches = orchestrator.run_pitch_generation(pitch_inputs)
-content = orchestrator.run_content_generation(content_inputs)
+# Access results
+print(f"Topics Generated: {len(results.topics)}")
+print(f"Content Pieces: {len(results.content_items)}")
+print(f"Pitches Created: {len(results.pitches)}")
 
-# Or run the full pipeline
-results = orchestrator.run_full_pipeline(inputs)
+# Visualize the flow
+plot()
 ```
 
 ### Command Line
 
 ```bash
-# Run the full pipeline with example inputs
+# Run the full pipeline with default inputs
 python -m vertical_labs
+
+# The flow visualization will be generated automatically
+```
+
+### Flow State
+
+The system uses Pydantic models to manage state:
+
+```python
+class Topic(BaseModel):
+    title: str
+    description: str
+    keywords: List[str]
+
+class ContentItem(BaseModel):
+    title: str
+    content: str
+    metadata: dict
+
+class Pitch(BaseModel):
+    title: str
+    pitch: str
+    target_audience: str
+
+class VerticalLabsState(BaseModel):
+    topics: List[Topic] = []
+    content_items: List[ContentItem] = []
+    pitches: List[Pitch] = []
+    domain: str = ""
+    target_audience: str = ""
+    content_goals: str = ""
 ```
 
 ## Architecture
 
-The system uses a hierarchical structure:
+The system uses a flow-based architecture with these components:
 
-1. **Orchestrator**: Coordinates all crews and manages the flow of data
-2. **Crews**: Specialized teams focused on specific tasks
-3. **Agents**: Individual AI agents with specific roles and tools
-4. **Tools**: Custom implementations for various tasks
+1. **Flow Manager**: Coordinates the execution sequence and state management
+   - Handles data flow between crews
+   - Manages shared state using Pydantic models
+   - Provides flow visualization
+   - Supports parallel execution where possible
+
+2. **Crews**: Specialized teams with specific responsibilities
+   - TopicsAI: First stage, generates topics
+   - ContentAI: Second stage, creates content
+   - PitchAI: Third stage, develops pitches
+   - Each crew operates independently but shares state
+
+3. **Agents**: Individual AI agents with specific roles
+   - Each agent has a defined responsibility
+   - Agents communicate within their crew
+   - Access to shared tools and resources
+
+4. **Tools**: Shared utilities across crews
+   - Each tool serves a specific purpose
+   - Tools can be used by any agent
+   - Results are stored in shared state
 
 ## Tools
 
@@ -113,57 +193,99 @@ The system uses a hierarchical structure:
 
 ## Advanced Features
 
-### Parallel Execution
+### Flow Execution
 
-The system supports parallel execution of tasks using the WorkflowManager:
+The system supports both sequential and parallel execution:
 
 ```python
-from vertical_labs.workflow import WorkflowManager
+from vertical_labs.flow import VerticalLabsFlow
 
-workflow = WorkflowManager(orchestrator)
-workflow.add_task("topics_1", "topics", inputs)
-workflow.add_task("topics_2", "topics", inputs)
-workflow.add_task("pitch_1", "pitch", inputs, dependencies=["topics_1"])
+# Create a custom flow
+class CustomFlow(VerticalLabsFlow):
+    @start()
+    def discover_topics(self):
+        return TopicsCrew().crew().kickoff(inputs={
+            "domain": self.state.domain
+        })
 
-results = await workflow.run_workflow()
+    @listen(discover_topics)
+    async def generate_content(self):
+        tasks = []
+        for topic in self.state.topics:
+            # Content generation runs in parallel
+            task = ContentCrew().crew().kickoff(inputs={
+                "topic": topic.title,
+                "content_goals": self.state.content_goals
+            })
+            tasks.append(task)
+        return await asyncio.gather(*tasks)
+
+    @listen(generate_content)
+    def create_pitches(self):
+        return PitchCrew().crew().kickoff(inputs={
+            "content": self.state.content_items,
+            "target_audience": self.state.target_audience
+        })
+
+# Run the flow
+flow = CustomFlow()
+flow.kickoff()
 ```
 
-### Performance Monitoring
+### Flow Monitoring
 
-Monitor crew performance and collect metrics:
+Monitor flow execution and visualize the process:
 
 ```python
-from vertical_labs.monitoring import PerformanceMonitor
+from vertical_labs.flow import VerticalLabsFlow
 
-monitor = PerformanceMonitor()
-monitor.start_monitoring("run_1", "topics", num_tasks=5)
+# Enable detailed logging
+flow = VerticalLabsFlow(verbose=True)
 
-# Log task completion
-monitor.log_task_completion("run_1", "task_1", success=True, tokens=1000, cost=0.02)
+# Run with monitoring
+results = flow.kickoff()
 
-# Get metrics
-metrics = monitor.get_metrics("run_1")
-stats = monitor.get_crew_stats("topics", days=30)
+# Generate flow visualization
+flow.plot()
+
+# Get execution metrics
+metrics = flow.get_metrics()
+print(f"Total Execution Time: {metrics.total_time}")
+print(f"Topics Generated: {len(results.topics)}")
+print(f"Success Rate: {metrics.success_rate}%")
 ```
 
-### Results Storage
+### State Management
 
-Store and retrieve results using SQLite:
+The flow maintains state throughout execution:
 
 ```python
-from vertical_labs.storage import ResultsStorage
+from vertical_labs.flow import VerticalLabsFlow
 
-storage = ResultsStorage()
-
-# Store results
-storage.store_run("run_1", "topics")
-result_id = storage.store_result("run_1", "topics", content)
-storage.store_relationship(source_id, target_id, "derived_from")
-
-# Retrieve results
-results = storage.get_results(run_id="run_1")
-related = storage.get_related_results(result_id)
-workflow = storage.export_workflow_results(workflow_id)
+class CustomFlow(VerticalLabsFlow):
+    def __init__(self):
+        # Initialize with custom state
+        super().__init__(
+            initial_state=VerticalLabsState(
+                domain="AI Technology",
+                target_audience="Enterprise CTOs",
+                content_goals="Technical deep dives"
+            )
+        )
+    
+    @start()
+    def begin_flow(self):
+        # Access state anywhere in the flow
+        print(f"Starting flow for domain: {self.state.domain}")
+        
+        # Update state as needed
+        self.state.topics.append(Topic(
+            title="AI Trends 2024",
+            description="Analysis of emerging AI trends",
+            keywords=["AI", "trends", "2024"]
+        ))
+        
+        return self.state.topics
 ```
 
 ## Testing
