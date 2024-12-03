@@ -2,16 +2,19 @@
 
 from typing import Dict, List
 
-from langchain.tools import BaseTool
+from crewai.tools import BaseTool
 
 
 class PitchGeneratorTool(BaseTool):
     """Tool for generating PR pitches based on topics."""
 
-    name = "pitch_generator_tool"
-    description = "Generates PR pitches based on topics and brand information"
+    name: str = "pitch_generator_tool"
+    description: str = "Generates PR pitches based on topics and brand information"
 
     def _run(self, topic: Dict, brand_info: Dict) -> Dict:
+        return self._execute(topic, brand_info)
+
+    def _execute(self, topic: Dict, brand_info: Dict) -> Dict:
         """Run the tool to generate a pitch.
 
         Args:
@@ -27,12 +30,14 @@ class PitchGeneratorTool(BaseTool):
             "subject_line": self._generate_subject_line(topic, brand_info),
             "pitch_body": self._generate_pitch_body(topic, brand_info),
             "value_proposition": self._generate_value_prop(topic, brand_info),
-            "call_to_action": self._generate_cta(topic, brand_info)
+            "call_to_action": self._generate_cta(topic, brand_info),
         }
 
     def _generate_subject_line(self, topic: Dict, brand_info: Dict) -> str:
         """Generate an attention-grabbing subject line."""
-        return f"Story Idea: {topic['title']} - Expert Insights from {brand_info['name']}"
+        return (
+            f"Story Idea: {topic['title']} - Expert Insights from {brand_info['name']}"
+        )
 
     def _generate_pitch_body(self, topic: Dict, brand_info: Dict) -> Dict:
         """Generate the main pitch content."""
@@ -40,7 +45,7 @@ class PitchGeneratorTool(BaseTool):
             "hook": f"Given the recent {topic['trend']}...",
             "context": "Market context and relevance",
             "brand_angle": f"How {brand_info['name']} fits in",
-            "expert_bio": f"About {brand_info['expert_name']}"
+            "expert_bio": f"About {brand_info['expert_name']}",
         }
 
     def _generate_value_prop(self, topic: Dict, brand_info: Dict) -> str:
@@ -51,13 +56,17 @@ class PitchGeneratorTool(BaseTool):
         """Generate a clear call to action."""
         return "Would you be interested in speaking with our expert?"
 
+
 class BrandMatchingTool(BaseTool):
     """Tool for matching brands with relevant topics and publishers."""
 
-    name = "brand_matching_tool"
-    description = "Matches brands with relevant topics and publishers"
+    name: str = "brand_matching_tool"
+    description: str = "Matches brands with relevant topics and publishers"
 
     def _run(self, brand: Dict, topics: List[Dict], publishers: List[Dict]) -> Dict:
+        return self._execute(brand, topics, publishers)
+
+    def _execute(self, brand: Dict, topics: List[Dict], publishers: List[Dict]) -> Dict:
         """Run the tool to find matches.
 
         Args:
@@ -68,11 +77,7 @@ class BrandMatchingTool(BaseTool):
         Returns:
             Dictionary with matching results
         """
-        matches = {
-            "high_priority": [],
-            "medium_priority": [],
-            "low_priority": []
-        }
+        matches = {"high_priority": [], "medium_priority": [], "low_priority": []}
 
         for topic in topics:
             for publisher in publishers:
@@ -81,7 +86,9 @@ class BrandMatchingTool(BaseTool):
                     "topic": topic,
                     "publisher": publisher,
                     "score": score,
-                    "rationale": self._generate_match_rationale(brand, topic, publisher)
+                    "rationale": self._generate_match_rationale(
+                        brand, topic, publisher
+                    ),
                 }
 
                 if score >= 0.8:
@@ -93,7 +100,9 @@ class BrandMatchingTool(BaseTool):
 
         return matches
 
-    def _calculate_match_score(self, brand: Dict, topic: Dict, publisher: Dict) -> float:
+    def _calculate_match_score(
+        self, brand: Dict, topic: Dict, publisher: Dict
+    ) -> float:
         """Calculate a match score between 0 and 1."""
         # This would use more sophisticated scoring in production
         relevance_score = 0.5  # Base score
@@ -112,17 +121,25 @@ class BrandMatchingTool(BaseTool):
 
         return min(relevance_score, 1.0)
 
-    def _generate_match_rationale(self, brand: Dict, topic: Dict, publisher: Dict) -> str:
+    def _generate_match_rationale(
+        self, brand: Dict, topic: Dict, publisher: Dict
+    ) -> str:
         """Generate explanation for the match."""
-        return f"Match based on category alignment ({brand['category']}) and audience fit"
+        return (
+            f"Match based on category alignment ({brand['category']}) and audience fit"
+        )
+
 
 class PitchOptimizationTool(BaseTool):
     """Tool for optimizing pitches based on publisher preferences and history."""
 
-    name = "pitch_optimization_tool"
-    description = "Optimizes pitches based on publisher data and success metrics"
+    name: str = "pitch_optimization_tool"
+    description: str = "Optimizes pitches based on publisher data and success metrics"
 
     def _run(self, pitch: Dict, publisher_data: Dict) -> Dict:
+        return self._execute(pitch, publisher_data)
+
+    def _execute(self, pitch: Dict, publisher_data: Dict) -> Dict:
         """Run the tool to optimize a pitch.
 
         Args:
@@ -136,7 +153,9 @@ class PitchOptimizationTool(BaseTool):
         recommendations = []
 
         # Analyze subject line
-        subject_metrics = self._analyze_subject_line(pitch["subject_line"], publisher_data)
+        subject_metrics = self._analyze_subject_line(
+            pitch["subject_line"], publisher_data
+        )
         if subject_metrics["length"] > 50:
             recommendations.append("Shorten subject line")
 
@@ -153,8 +172,8 @@ class PitchOptimizationTool(BaseTool):
             "recommendations": recommendations,
             "metrics": {
                 "subject_metrics": subject_metrics,
-                "body_metrics": body_metrics
-            }
+                "body_metrics": body_metrics,
+            },
         }
 
     def _analyze_subject_line(self, subject: str, publisher_data: Dict) -> Dict:
@@ -162,7 +181,7 @@ class PitchOptimizationTool(BaseTool):
         return {
             "length": len(subject),
             "has_numbers": any(c.isdigit() for c in subject),
-            "personalized": publisher_data["name"] in subject
+            "personalized": publisher_data["name"] in subject,
         }
 
     def _analyze_pitch_body(self, body: Dict, publisher_data: Dict) -> Dict:
@@ -170,7 +189,7 @@ class PitchOptimizationTool(BaseTool):
         return {
             "paragraphs": len(body),
             "has_stats": "%" in str(body),
-            "has_quotes": '"' in str(body)
+            "has_quotes": '"' in str(body),
         }
 
     def _apply_publisher_preferences(self, pitch: Dict, publisher_data: Dict) -> Dict:

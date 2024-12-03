@@ -1,0 +1,73 @@
+guidelines_task:
+  description: "Develop and store brand voice and content guidelines using the EditorialGuidelinesTool. Consider the publisher's niche, audience, and content strategy."
+  expected_output: "A comprehensive set of brand voice guidelines stored for consistent access by all agents."
+  agent: content_strategist
+  tool_inputs:
+    editorial_guidelines_tool:
+      publisher_info:
+        name: "{{publisher_name}}"
+        type: "{{business_type}}"
+        categories: "{{categories}}"
+        audience: "{{target_audience}}"
+        locations: "{{target_locations}}"
+
+website_analysis_task:
+  description: "Analyze the publisher's website content using WebsiteAnalyzerTool to extract insights about content categories, audience indicators, and content patterns."
+  expected_output: "A detailed analysis of website content, including primary categories and audience indicators."
+  agent: audience_analyst
+
+trends_research_task:
+  description: "Research current trends and events relevant to the publisher. Focus on trends that align with the publisher's niche."
+  expected_output: "A list of current trends, upcoming events, and potential content gaps in the publisher's niche."
+  agent: topic_researcher
+
+topic_generation_task:
+  description: "Generate and score initial topic ideas ensuring alignment with audience interests and current trends. Consider the website analysis and trends research results."
+  expected_output: "A list of scored topic ideas with relevance, audience appeal, and SEO potential ratings."
+  agent: content_strategist
+  context:
+    - website_analysis_task
+    - trends_research_task
+  output_format:
+    topics:
+      - topic: "string"
+        score: "number"
+        relevance: "number"
+        audience_appeal: "number"
+        seo_potential: "number"
+
+diversity_check_task:
+  description: "Review topic suggestions using ContentDiversityTool to ensure diversity in content types and subject matter. Check for duplicates and overlapping themes."
+  expected_output: "A validated list of topics ensuring diversity in content types and subject matter."
+  agent: quality_assurer
+  context:
+    - topic_generation_task
+  tool_inputs:
+    content_diversity_tool:
+      content_list:
+        - topic: "{{topic}}"
+          content: "{{description}}"
+          metadata:
+            score: "{{score}}"
+            relevance: "{{relevance}}"
+            audience_appeal: "{{audience_appeal}}"
+            seo_potential: "{{seo_potential}}"
+      existing_content: []
+
+final_compilation_task:
+  description: "Compile the final list of topic suggestions ensuring alignment with guidelines and incorporating diversity check results. Prioritize topics based on relevance and potential impact."
+  expected_output: "A prioritized list of topic suggestions ready for implementation."
+  agent: topic_coordinator
+  context:
+    - diversity_check_task
+  output_format:
+    topics:
+      - title: "string"
+        description: "string"
+        keywords: ["string"]
+        score: "number"
+        metadata:
+          relevance: "number"
+          audience_appeal: "number"
+          seo_potential: "number"
+          diversity_score: "number"

@@ -16,15 +16,15 @@ def config() -> Dict:
     """Test configuration fixture."""
     return {
         "topics_ai": {
-            "llm": "gpt-4",
+            "llm": "gpt-4o",
             "verbose": True
         },
         "pitch_ai": {
-            "llm": "gpt-4",
+            "llm": "gpt-4o",
             "verbose": True
         },
         "content_ai": {
-            "llm": "gpt-4",
+            "llm": "gpt-4o",
             "verbose": True
         }
     }

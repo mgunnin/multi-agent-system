@@ -1,1 +1,4 @@
 .env
+uv.lock
+.DS_Store
+crewai-docs/*

@@ -2,9 +2,9 @@
 
 from typing import Dict
 
-from .contentai.crew import ContentAICrew
-from .pitchai.crew import PitchAICrew
-from .topicsai.crew import TopicsAICrew
+from vertical_labs.crews.content.content_crew import ContentAICrew
+from vertical_labs.crews.pitch.pitch_crew import PitchAICrew
+from vertical_labs.crews.topics.topics_crew import TopicsAICrew
 
 
 class VerticalLabsOrchestrator:

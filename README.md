@@ -53,6 +53,7 @@ graph TD
 ```
 
 Key Features:
+
 - Centralized state management using Pydantic models
 - Sequential execution with data dependencies
 - Parallel content generation for multiple topics
