@@ -1,11 +1,11 @@
 """Main entry point for Vertical Labs."""
 
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from crewai.flow.flow import Flow, listen, start
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from vertical_labs.crews.content.content_crew import ContentAICrew
 from vertical_labs.crews.pitch.pitch_crew import PitchAICrew
@@ -17,15 +17,28 @@ class Topic(BaseModel):
     description: str
     keywords: List[str]
 
+
 class ContentItem(BaseModel):
     title: str
     content: str
     metadata: Dict
 
+
 class Pitch(BaseModel):
     title: str
     pitch: str
     target_audience: str
+
+
+class PublisherInfo(BaseModel):
+    """Publisher information for content analysis and targeting."""
+    name: str = Field(description="Name of the publisher")
+    url: str = Field(description="Publisher's website URL")
+    categories: List[str] = Field(description="Content categories covered by the publisher")
+    audience: str = Field(description="Publisher's target audience")
+    locations: List[str] = Field(description="Geographic locations covered")
+    preferences: Optional[Dict] = Field(default_factory=dict, description="Publisher's content preferences")
+
 
 class VerticalLabsState(BaseModel):
     topics: List[Topic] = []
@@ -34,19 +47,14 @@ class VerticalLabsState(BaseModel):
     domain: str = ""
     target_audience: str = ""
     content_goals: str = ""
+    publisher: Optional[PublisherInfo] = None
+
 
 class VerticalLabsOrchestrator:
     """Orchestrator for managing all Vertical Labs crews."""
 
     def __init__(self, config: Dict):
-        """Initialize the orchestrator.
-
-        Args:
-        config (Dict): Configuration dictionary with settings for all crews.
-            - "topics_ai" (dict, optional): Configuration for the TopicsAICrew.
-            - "pitch_ai" (dict, optional): Configuration for the PitchAICrew.
-            - "content_ai" (dict, optional): Configuration for the ContentAICrew.
-        """
+        """Initialize the orchestrator."""
         self.config = config
         self.topics_crew = TopicsAICrew(config.get("topics_ai", {}))
         self.pitch_crew = PitchAICrew(config.get("pitch_ai", {}))
@@ -72,7 +80,7 @@ class VerticalLabsOrchestrator:
             "publisher_url": inputs["publisher_info"]["url"],
             "categories": inputs["publisher_info"]["categories"],
             "audience": inputs["publisher_info"]["audience"],
-            "locations": inputs["publisher_info"]["locations"]
+            "locations": inputs["publisher_info"]["locations"],
         })
 
         # Generate pitches for the topics
@@ -80,7 +88,7 @@ class VerticalLabsOrchestrator:
             "topics": topics_result["topics"],
             "brand_info": inputs["brand_info"],
             "publishers": [inputs["publisher_info"]],
-            "preferences": inputs["publisher_info"].get("preferences", {})
+            "preferences": inputs["publisher_info"].get("preferences", {}),
         })
 
         # Generate content for accepted pitches
@@ -91,7 +99,7 @@ class VerticalLabsOrchestrator:
                     "topic": pitch["topic"],
                     "guidelines": topics_result["metadata"]["guidelines"],
                     "brand_info": inputs["brand_info"],
-                    "publisher": inputs["publisher_info"]
+                    "publisher": inputs["publisher_info"],
                 })
                 content_results.append(content_result)
 
@@ -102,9 +110,10 @@ class VerticalLabsOrchestrator:
             "metadata": {
                 "publisher": inputs["publisher_info"],
                 "brand": inputs["brand_info"],
-                "requirements": inputs["requirements"]
-            }
+                "requirements": inputs["requirements"],
+            },
         }
+
 
 class VerticalLabsFlow(Flow[VerticalLabsState]):
     initial_state = VerticalLabsState
@@ -123,24 +132,27 @@ class VerticalLabsFlow(Flow[VerticalLabsState]):
             self.topics_crew.config = {
                 "domain": self.state.domain,
                 "target_audience": self.state.target_audience,
+                "publisher": self.state.publisher.model_dump() if self.state.publisher else None,
                 "agents_config": os.path.join("src/vertical_labs/crews/topics/config", "agents.yaml"),
-                "tasks_config": os.path.join("src/vertical_labs/crews/topics/config", "tasks.yaml")
+                "tasks_config": os.path.join("src/vertical_labs/crews/topics/config", "tasks.yaml"),
             }
 
         if not self.content_crew:
             self.content_crew = ContentAICrew()
             self.content_crew.config = {
                 "content_goals": self.state.content_goals,
+                "publisher": self.state.publisher.model_dump() if self.state.publisher else None,
                 "agents_config": os.path.join("src/vertical_labs/crews/content/config", "agents.yaml"),
-                "tasks_config": os.path.join("src/vertical_labs/crews/content/config", "tasks.yaml")
+                "tasks_config": os.path.join("src/vertical_labs/crews/content/config", "tasks.yaml"),
             }
 
         if not self.pitch_crew:
             self.pitch_crew = PitchAICrew()
             self.pitch_crew.config = {
                 "target_audience": self.state.target_audience,
+                "publisher": self.state.publisher.model_dump() if self.state.publisher else None,
                 "agents_config": os.path.join("src/vertical_labs/crews/pitch/config", "agents.yaml"),
-                "tasks_config": os.path.join("src/vertical_labs/crews/pitch/config", "tasks.yaml")
+                "tasks_config": os.path.join("src/vertical_labs/crews/pitch/config", "tasks.yaml"),
             }
 
     @start()
@@ -148,10 +160,11 @@ class VerticalLabsFlow(Flow[VerticalLabsState]):
         """Start the topic discovery process."""
         print("Starting Topics Discovery")
         self._init_crews()
-        
+
         result = self.topics_crew.run({
             "domain": self.state.domain,
-            "target_audience": self.state.target_audience
+            "target_audience": self.state.target_audience,
+            "publisher": self.state.publisher.model_dump() if self.state.publisher else None
         })
 
         # Convert dictionary topics to Topic objects
@@ -159,7 +172,7 @@ class VerticalLabsFlow(Flow[VerticalLabsState]):
             Topic(
                 title=topic["title"],
                 description=topic["description"],
-                keywords=topic["keywords"]
+                keywords=topic["keywords"],
             )
             for topic in result["topics"]
         ]
@@ -177,13 +190,14 @@ class VerticalLabsFlow(Flow[VerticalLabsState]):
                 "topic": topic.title,
                 "description": topic.description,
                 "keywords": topic.keywords,
-                "content_goals": self.state.content_goals
+                "content_goals": self.state.content_goals,
+                "publisher": self.state.publisher.model_dump() if self.state.publisher else None
             })
 
             content_item = ContentItem(
                 title=output["title"],
                 content=output["content"],
-                metadata=output["metadata"]
+                metadata=output["metadata"],
             )
             content_items.append(content_item)
 
@@ -201,20 +215,27 @@ class VerticalLabsFlow(Flow[VerticalLabsState]):
             output = self.pitch_crew.run({
                 "content_title": content_item.title,
                 "content": content_item.content,
-                "target_audience": self.state.target_audience
+                "target_audience": self.state.target_audience,
+                "publisher": self.state.publisher.model_dump() if self.state.publisher else None
             })
 
             pitch = Pitch(
                 title=output["title"],
                 pitch=output["pitch"],
-                target_audience=output["target_audience"]
+                target_audience=output["target_audience"],
             )
             pitches.append(pitch)
 
         self.state.pitches = pitches
         return self.state.pitches
 
+
 def kickoff(
+    publisher_name: str,
+    publisher_url: str,
+    publisher_categories: List[str],
+    publisher_audience: str,
+    publisher_locations: List[str],
     domain: str = "Enterprise AI Solutions",
     target_audience: str = "B2B audience including CTOs, Tech Leaders, and Developers",
     content_goals: str = """
@@ -222,26 +243,42 @@ def kickoff(
     - Demonstrates expertise in enterprise-grade AI solutions
     - Includes case studies and ROI metrics
     - Maintains professional tone and analytical style
-    """
+    """,
 ):
     """Kickoff the Vertical Labs flow."""
     flow = VerticalLabsFlow()
     flow.state.domain = domain
     flow.state.target_audience = target_audience
     flow.state.content_goals = content_goals
+    flow.state.publisher = PublisherInfo(
+        name=publisher_name,
+        url=publisher_url,
+        categories=publisher_categories,
+        audience=publisher_audience,
+        locations=publisher_locations
+    )
     return flow.kickoff()
+
 
 def plot():
     """Generate a visualization of the flow."""
     flow = VerticalLabsFlow()
     flow.plot()
 
+
 def main():
     """Run the Vertical Labs system."""
     # Load environment variables
     load_dotenv()
 
-    # Example inputs
+    # Example publisher
+    publisher_name = "TechCrunch"
+    publisher_url = "https://techcrunch.com"
+    publisher_categories = ["Technology", "Startups", "AI/ML", "Enterprise"]
+    publisher_audience = "Tech professionals, entrepreneurs, investors"
+    publisher_locations = ["Global", "USA", "Europe"]
+
+    # Example domain and goals
     domain = "Enterprise AI Solutions"
     target_audience = """
     B2B audience including CTOs, Tech Leaders, and Developers
@@ -259,6 +296,11 @@ def main():
 
     # Run the flow
     results = kickoff(
+        publisher_name=publisher_name,
+        publisher_url=publisher_url,
+        publisher_categories=publisher_categories,
+        publisher_audience=publisher_audience,
+        publisher_locations=publisher_locations,
         domain=domain,
         target_audience=target_audience,
         content_goals=content_goals
@@ -272,6 +314,7 @@ def main():
 
     # Generate flow visualization
     plot()
+
 
 if __name__ == "__main__":
     main()

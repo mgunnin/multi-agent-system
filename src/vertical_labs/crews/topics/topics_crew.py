@@ -1,14 +1,27 @@
 """TopicsAI crew implementation with self-evaluation loop."""
 
-from typing import Dict
+from typing import Dict, List, Optional
 
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
+from pydantic import BaseModel
 
 from vertical_labs.tools.content_tools import (
     ContentDiversityTool,
     EditorialGuidelinesTool,
+    PublisherInfo
 )
+
+
+class TopicsInput(BaseModel):
+    """Input schema for TopicsAICrew."""
+    domain: str
+    target_audience: str
+    publisher_name: Optional[str] = None
+    publisher_url: Optional[str] = None
+    categories: Optional[List[str]] = None
+    audience: Optional[str] = None
+    locations: Optional[List[str]] = None
 
 
 @CrewBase
@@ -125,12 +138,31 @@ class TopicsAICrew:
             verbose=True,
         )
 
+    def _create_publisher_info(self, inputs: Dict) -> PublisherInfo:
+        """Create a PublisherInfo instance from input dictionary."""
+        return PublisherInfo(
+            name=inputs.get("publisher_name", "Generic Publisher"),
+            type="B2B" if "B2B" in inputs.get("target_audience", "").upper() else "B2C",
+            categories=inputs.get("categories", []),
+            audience=inputs.get("audience", inputs.get("target_audience", "")),
+            locations=inputs.get("locations", ["global"])
+        )
+
     def run(self, inputs: Dict) -> Dict:
         """Run the topics crew with the given inputs."""
-        # Update config with inputs
-        self.config.update(inputs)
+        # Validate inputs
+        validated_inputs = TopicsInput(**inputs)
+        
+        # Update config with validated inputs
+        self.config.update(validated_inputs.model_dump())
 
-        # Get the crew instance by calling the method
+        # Create publisher info
+        publisher_info = self._create_publisher_info(validated_inputs.model_dump())
+        
+        # Add publisher info to config for tasks
+        self.config["publisher_info"] = publisher_info.model_dump()
+
+        # Get the crew instance
         crew_instance = self.topics_crew()
 
         # Run the crew

@@ -1,8 +1,56 @@
 """Content analysis and generation tools for Vertical Labs crews."""
 
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
-from crewai.tools import BaseTool, Tool
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+
+class PublisherInfo(BaseModel):
+    """Publisher information schema."""
+
+    name: Optional[str] = Field(
+        default="Generic Publisher", description="Publisher name"
+    )
+    type: Optional[str] = Field(
+        default="B2C", description="Type of business (B2B or B2C)"
+    )
+    categories: Optional[List[str]] = Field(
+        default_factory=list, description="Content categories"
+    )
+    audience: Optional[str] = Field(default="general", description="Target audience")
+    locations: Optional[List[str]] = Field(
+        default_factory=lambda: ["global"], description="Target locations"
+    )
+
+
+class EditorialGuidelinesSchema(BaseModel):
+    """Schema for EditorialGuidelinesTool arguments."""
+
+    publisher_info: PublisherInfo = Field(
+        description="Dictionary with publisher information including name, type, categories, audience, and locations"
+    )
+
+
+class ContentItem(BaseModel):
+    """Content item schema."""
+
+    topic: str = Field(description="The topic of the content")
+    content: Optional[str] = Field(default="", description="The content text")
+    metadata: Optional[Dict] = Field(
+        default_factory=dict, description="Additional metadata about the content"
+    )
+
+
+class ContentDiversitySchema(BaseModel):
+    """Schema for ContentDiversityTool arguments."""
+
+    content_list: List[ContentItem] = Field(
+        description="List of content items to analyze"
+    )
+    existing_content: Optional[List[ContentItem]] = Field(
+        default=None, description="Optional list of existing content to check against"
+    )
 
 
 class EditorialGuidelinesTool(BaseTool):
@@ -10,45 +58,11 @@ class EditorialGuidelinesTool(BaseTool):
 
     name: str = "editorial_guidelines_tool"
     description: str = "Generates and manages editorial guidelines for publishers"
-    args_schema: Dict = {
-        "publisher_info": {
-            "type": "dict",
-            "description": "Dictionary with publisher information",
-            "required": True,
-            "schema": {
-                "name": {"type": "string", "required": False},
-                "type": {"type": "string", "required": False},
-                "categories": {"type": "list", "required": False},
-                "audience": {"type": "string", "required": False},
-                "locations": {"type": "list", "required": False}
-            }
-        }
-    }
+    args_schema: type[EditorialGuidelinesSchema] = EditorialGuidelinesSchema
 
-    def _run(self, publisher_info: Dict) -> Dict:
+    def _run(self, publisher_info: PublisherInfo) -> Dict:
         """Run the tool with proper error handling."""
-        # Ensure publisher_info has default values
-        publisher_info = self._sanitize_publisher_info(publisher_info)
-        return self._execute(publisher_info)
-
-    def _sanitize_publisher_info(self, publisher_info: Dict) -> Dict:
-        """Ensure all required fields exist with default values."""
-        defaults = {
-            "name": "Generic Publisher",
-            "type": "B2C",
-            "categories": [],
-            "audience": "general",
-            "locations": ["global"]
-        }
-        
-        if not publisher_info:
-            return defaults
-            
-        # Merge provided info with defaults for missing fields
-        return {
-            **defaults,
-            **{k: v for k, v in publisher_info.items() if v is not None}
-        }
+        return self._execute(publisher_info.model_dump())
 
     def _execute(self, publisher_info: Dict) -> Dict:
         """Run the tool to generate editorial guidelines."""
@@ -99,71 +113,20 @@ class ContentDiversityTool(BaseTool):
 
     name: str = "content_diversity_tool"
     description: str = "Analyzes content to ensure diversity and avoid duplication"
-    args_schema: Dict = {
-        "content_list": {
-            "type": "list",
-            "description": "List of content items to analyze. Each item should be a dictionary containing at least a 'topic' field.",
-            "required": True,
-            "schema": {
-                "type": "dict",
-                "schema": {
-                    "topic": {"type": "string", "required": True},
-                    "content": {"type": "string", "required": False},
-                    "metadata": {"type": "dict", "required": False}
-                }
-            }
-        },
-        "existing_content": {
-            "type": "list",
-            "description": "Optional list of existing content items to check against. Each item should follow the same schema as content_list.",
-            "required": False,
-            "schema": {
-                "type": "dict",
-                "schema": {
-                    "topic": {"type": "string", "required": True},
-                    "content": {"type": "string", "required": False},
-                    "metadata": {"type": "dict", "required": False}
-                }
-            }
-        }
-    }
+    args_schema: type[ContentDiversitySchema] = ContentDiversitySchema
 
     def _run(
-        self, content_list: List[Dict], existing_content: Optional[List[Dict]] = None
+        self,
+        content_list: List[ContentItem],
+        existing_content: Optional[List[ContentItem]] = None,
     ) -> Dict:
         """Run the tool with proper error handling."""
-        # Validate and sanitize inputs
-        content_list = self._sanitize_content_list(content_list)
-        if existing_content:
-            existing_content = self._sanitize_content_list(existing_content)
         return self._execute(content_list, existing_content)
 
-    def _sanitize_content_list(self, content_list: List[Dict]) -> List[Dict]:
-        """Ensure all content items have required fields."""
-        if not content_list:
-            return []
-
-        sanitized_list = []
-        for item in content_list:
-            if isinstance(item, dict):
-                # Ensure each item has at least a topic
-                sanitized_item = {
-                    "topic": item.get("topic", "Untitled"),
-                    "content": item.get("content", ""),
-                    "metadata": item.get("metadata", {})
-                }
-                sanitized_list.append(sanitized_item)
-            else:
-                # If item is not a dict, create a minimal valid item
-                sanitized_list.append({
-                    "topic": "Untitled",
-                    "content": "",
-                    "metadata": {}
-                })
-        return sanitized_list
-
     def _execute(
-        self, content_list: List[Dict], existing_content: Optional[List[Dict]] = None
+        self,
+        content_list: List[ContentItem],
+        existing_content: Optional[List[ContentItem]] = None,
     ) -> Dict:
         """Run the tool to analyze content diversity."""
         results = {
@@ -178,13 +141,13 @@ class ContentDiversityTool(BaseTool):
             return results
 
         # Analyze topic diversity
-        topics = [item["topic"] for item in content_list]
+        topics = [item.topic for item in content_list]
         unique_topics = set(topics)
         results["diversity_score"] = len(unique_topics) / len(topics) if topics else 0.0
 
         # Check for duplicates with existing content
         if existing_content:
-            existing_topics = [item["topic"] for item in existing_content]
+            existing_topics = [item.topic for item in existing_content]
             duplicates = set(topics).intersection(existing_topics)
             results["duplicate_topics"] = list(duplicates)
 
@@ -203,7 +166,6 @@ class ContentDiversityTool(BaseTool):
 
     def _cluster_topics(self, topics: List[str]) -> Dict[str, List[str]]:
         """Group similar topics into clusters."""
-        # Simple clustering based on common words
         clusters = {}
         for topic in topics:
             words = set(topic.lower().split())
