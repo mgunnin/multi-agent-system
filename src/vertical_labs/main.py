@@ -1,7 +1,7 @@
 """Main entry point for Vertical Labs."""
 
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Callable
 
 from crewai.flow.flow import Flow, listen, start
 from dotenv import load_dotenv
@@ -48,6 +48,7 @@ class VerticalLabsState(BaseModel):
     target_audience: str = ""
     content_goals: str = ""
     publisher: Optional[PublisherInfo] = None
+    progress_callback: Optional[Callable] = None
 
 
 class VerticalLabsOrchestrator:
@@ -118,12 +119,18 @@ class VerticalLabsOrchestrator:
 class VerticalLabsFlow(Flow[VerticalLabsState]):
     initial_state = VerticalLabsState
 
-    def __init__(self):
+    def __init__(self, progress_callback: Optional[Callable] = None):
         super().__init__()
         # Initialize crews with proper configuration paths
         self.topics_crew = None
         self.content_crew = None
         self.pitch_crew = None
+        self.progress_callback = progress_callback
+
+    def _update_progress(self, stage: str, status: str, detail: str):
+        """Update progress through callback if available."""
+        if self.progress_callback:
+            self.progress_callback(stage, status, detail)
 
     def _init_crews(self):
         """Initialize crews with proper configuration."""
@@ -158,76 +165,96 @@ class VerticalLabsFlow(Flow[VerticalLabsState]):
     @start()
     def discover_topics(self):
         """Start the topic discovery process."""
+        self._update_progress("topics", "In Progress", "Starting Topics Discovery")
         print("Starting Topics Discovery")
         self._init_crews()
 
-        result = self.topics_crew.run({
-            "domain": self.state.domain,
-            "target_audience": self.state.target_audience,
-            "publisher": self.state.publisher.model_dump() if self.state.publisher else None
-        })
-
-        # Convert dictionary topics to Topic objects
-        self.state.topics = [
-            Topic(
-                title=topic["title"],
-                description=topic["description"],
-                keywords=topic["keywords"],
-            )
-            for topic in result["topics"]
-        ]
-        return self.state.topics
-
-    @listen(discover_topics)
-    async def generate_content(self):
-        """Generate content for discovered topics."""
-        print("Generating Content")
-        self._init_crews()
-        content_items = []
-
-        for topic in self.state.topics:
-            output = self.content_crew.run({
-                "topic": topic.title,
-                "description": topic.description,
-                "keywords": topic.keywords,
-                "content_goals": self.state.content_goals,
-                "publisher": self.state.publisher.model_dump() if self.state.publisher else None
-            })
-
-            content_item = ContentItem(
-                title=output["title"],
-                content=output["content"],
-                metadata=output["metadata"],
-            )
-            content_items.append(content_item)
-
-        self.state.content_items = content_items
-        return self.state.content_items
-
-    @listen(generate_content)
-    async def create_pitches(self):
-        """Create pitches for generated content."""
-        print("Creating Pitches")
-        self._init_crews()
-        pitches = []
-
-        for content_item in self.state.content_items:
-            output = self.pitch_crew.run({
-                "content_title": content_item.title,
-                "content": content_item.content,
+        try:
+            result = self.topics_crew.run({
+                "domain": self.state.domain,
                 "target_audience": self.state.target_audience,
                 "publisher": self.state.publisher.model_dump() if self.state.publisher else None
             })
 
-            pitch = Pitch(
-                title=output["title"],
-                pitch=output["pitch"],
-                target_audience=output["target_audience"],
-            )
-            pitches.append(pitch)
+            # Convert dictionary topics to Topic objects
+            self.state.topics = [
+                Topic(
+                    title=topic["title"],
+                    description=topic["description"],
+                    keywords=topic["keywords"],
+                )
+                for topic in result["topics"]
+            ]
+            self._update_progress("topics", "Complete", f"Generated {len(self.state.topics)} topics")
+            return self.state.topics
+        except Exception as e:
+            self._update_progress("topics", "Error", f"Error in topic discovery: {str(e)}")
+            raise
 
-        self.state.pitches = pitches
-        return self.state.pitches
+    @listen(discover_topics)
+    async def generate_content(self):
+        """Generate content for discovered topics."""
+        self._update_progress("content", "In Progress", "Starting Content Generation")
+        print("Generating Content")
+        self._init_crews()
+        content_items = []
+
+        try:
+            for i, topic in enumerate(self.state.topics, 1):
+                self._update_progress("content", "In Progress", f"Generating content for topic {i}/{len(self.state.topics)}")
+                output = self.content_crew.run({
+                    "topic": topic.title,
+                    "description": topic.description,
+                    "keywords": topic.keywords,
+                    "content_goals": self.state.content_goals,
+                    "publisher": self.state.publisher.model_dump() if self.state.publisher else None
+                })
+
+                content_item = ContentItem(
+                    title=output["title"],
+                    content=output["content"],
+                    metadata=output["metadata"],
+                )
+                content_items.append(content_item)
+
+            self.state.content_items = content_items
+            self._update_progress("content", "Complete", f"Generated {len(content_items)} content pieces")
+            return self.state.content_items
+        except Exception as e:
+            self._update_progress("content", "Error", f"Error in content generation: {str(e)}")
+            raise
+
+    @listen(generate_content)
+    async def create_pitches(self):
+        """Create pitches for generated content."""
+        self._update_progress("pitches", "In Progress", "Starting Pitch Creation")
+        print("Creating Pitches")
+        self._init_crews()
+        pitches = []
+
+        try:
+            for i, content_item in enumerate(self.state.content_items, 1):
+                self._update_progress("pitches", "In Progress", f"Creating pitch {i}/{len(self.state.content_items)}")
+                output = self.pitch_crew.run({
+                    "content_title": content_item.title,
+                    "content": content_item.content,
+                    "target_audience": self.state.target_audience,
+                    "publisher": self.state.publisher.model_dump() if self.state.publisher else None
+                })
+
+                pitch = Pitch(
+                    title=output["title"],
+                    pitch=output["pitch"],
+                    target_audience=output["target_audience"],
+                )
+                pitches.append(pitch)
+
+            self.state.pitches = pitches
+            self._update_progress("pitches", "Complete", f"Created {len(pitches)} pitches")
+            return self.state.pitches
+        except Exception as e:
+            self._update_progress("pitches", "Error", f"Error in pitch creation: {str(e)}")
+            raise
 
 
 def kickoff(
@@ -244,9 +271,10 @@ def kickoff(
     - Includes case studies and ROI metrics
     - Maintains professional tone and analytical style
     """,
+    progress_callback: Optional[Callable] = None
 ):
     """Kickoff the Vertical Labs flow."""
-    flow = VerticalLabsFlow()
+    flow = VerticalLabsFlow(progress_callback=progress_callback)
     flow.state.domain = domain
     flow.state.target_audience = target_audience
     flow.state.content_goals = content_goals

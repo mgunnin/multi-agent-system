@@ -14,7 +14,15 @@ def main():
     st.write("Generate content ideas and pitches for publishers")
 
     # Create tabs for different sections
-    setup_tab, results_tab = st.tabs(["Setup", "Results"])
+    setup_tab, progress_tab, results_tab = st.tabs(["Setup", "Progress", "Results"])
+
+    # Initialize session state for progress tracking
+    if "progress" not in st.session_state:
+        st.session_state.progress = {
+            "topics": {"status": "Not Started", "details": []},
+            "content": {"status": "Not Started", "details": []},
+            "pitches": {"status": "Not Started", "details": []},
+        }
 
     with setup_tab:
         st.header("Publisher Information")
@@ -71,6 +79,13 @@ def main():
             submitted = st.form_submit_button("Generate Content")
 
             if submitted:
+                # Reset progress
+                st.session_state.progress = {
+                    "topics": {"status": "In Progress", "details": []},
+                    "content": {"status": "Not Started", "details": []},
+                    "pitches": {"status": "Not Started", "details": []},
+                }
+
                 # Store the inputs in session state
                 st.session_state.inputs = {
                     "publisher_name": publisher_name,
@@ -93,6 +108,12 @@ def main():
                 # Show a spinner while processing
                 with st.spinner("Running CrewAI..."):
                     try:
+                        # Update progress for topics
+                        st.session_state.progress["topics"]["status"] = "In Progress"
+                        st.session_state.progress["topics"]["details"].append(
+                            "Starting Topics Discovery..."
+                        )
+
                         results = kickoff(
                             publisher_name=publisher_name,
                             publisher_url=publisher_url,
@@ -105,11 +126,53 @@ def main():
                             ],
                             domain=domain,
                             content_goals=content_goals,
+                            progress_callback=update_progress,
                         )
+
+                        # Update progress for completion
+                        st.session_state.progress["topics"]["status"] = "Complete"
+                        st.session_state.progress["content"]["status"] = "Complete"
+                        st.session_state.progress["pitches"]["status"] = "Complete"
+
                         st.session_state.results = results
                         st.success("Content generation complete!")
+
                     except Exception as e:
                         st.error(f"An error occurred: {str(e)}")
+                        # Update progress for error
+                        for stage in st.session_state.progress:
+                            if (
+                                st.session_state.progress[stage]["status"]
+                                == "In Progress"
+                            ):
+                                st.session_state.progress[stage]["status"] = "Error"
+                                st.session_state.progress[stage]["details"].append(
+                                    f"Error: {str(e)}"
+                                )
+
+    with progress_tab:
+        st.header("Generation Progress")
+
+        # Topics Progress
+        st.subheader("Topics Discovery")
+        st.write(f"Status: {st.session_state.progress['topics']['status']}")
+        if st.session_state.progress["topics"]["details"]:
+            for detail in st.session_state.progress["topics"]["details"]:
+                st.write(f"- {detail}")
+
+        # Content Progress
+        st.subheader("Content Generation")
+        st.write(f"Status: {st.session_state.progress['content']['status']}")
+        if st.session_state.progress["content"]["details"]:
+            for detail in st.session_state.progress["content"]["details"]:
+                st.write(f"- {detail}")
+
+        # Pitches Progress
+        st.subheader("Pitch Creation")
+        st.write(f"Status: {st.session_state.progress['pitches']['status']}")
+        if st.session_state.progress["pitches"]["details"]:
+            for detail in st.session_state.progress["pitches"]["details"]:
+                st.write(f"- {detail}")
 
     with results_tab:
         if "results" in st.session_state:
@@ -142,6 +205,13 @@ def main():
 
         else:
             st.info("Submit the form to generate content and see results here.")
+
+
+def update_progress(stage: str, status: str, detail: str):
+    """Update the progress state in Streamlit."""
+    if stage in st.session_state.progress:
+        st.session_state.progress[stage]["status"] = status
+        st.session_state.progress[stage]["details"].append(detail)
 
 
 if __name__ == "__main__":
