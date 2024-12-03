@@ -110,13 +110,32 @@ print(f"Pitches Created: {len(results.pitches)}")
 plot()
 ```
 
-### Command Line
+### Installation
+
+Ensure you have Python >=3.10 <=3.13 installed on your system. First, if you haven't already, install CrewAI:
 
 ```bash
-# Run the full pipeline with default inputs
-python -m vertical_labs
+pip install crewai
+```
 
-# The flow visualization will be generated automatically
+Next, navigate to your project directory and install the dependencies:
+
+```bash
+crewai install
+```
+
+### Running the Project
+
+To kickstart your crew of AI agents and begin task execution, run this from the root folder:
+
+```bash
+crewai flow kickoff
+```
+
+To visualize the flow structure:
+
+```bash
+crewai flow plot
 ```
 
 ### Flow State

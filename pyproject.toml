@@ -1,15 +1,21 @@
-[tool.poetry]
+[project]
 name = "vertical-labs"
 version = "0.1.0"
 description = "Multi-agentic system using CrewAI for Vertical Labs"
-authors = ["OpenHands <openhands@all-hands.dev>"]
+authors = [
+    { name = "OpenHands", email = "openhands@all-hands.dev" }
+]
+requires-python = ">=3.10,<=3.13"
+dependencies = [
+    "asyncio>=3.4.3",
+    "crewai[tools]>=0.83.0,<1.0.0",
+    "python-dotenv>=1.0.0"
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-crewai = "^0.11.0"
-crewai-tools = "^0.0.9"
-python-dotenv = "^1.0.0"
+[project.scripts]
+kickoff = "vertical_labs.main:kickoff"
+plot = "vertical_labs.main:plot"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
