@@ -1,30 +1,33 @@
 """Main entry point for Vertical Labs."""
 
 import os
+
 from dotenv import load_dotenv
+
 from .orchestrator import VerticalLabsOrchestrator
+
 
 def main():
     """Run the Vertical Labs system."""
     # Load environment variables
     load_dotenv()
-    
+
     # Example configuration
     config = {
         "topics_ai": {
-            "llm": os.getenv("OPENAI_MODEL_NAME", "gpt-4"),
+            "llm": os.getenv("OPENAI_MODEL_NAME", "gpt-4o"),
             "verbose": True
         },
         "pitch_ai": {
-            "llm": os.getenv("OPENAI_MODEL_NAME", "gpt-4"),
+            "llm": os.getenv("OPENAI_MODEL_NAME", "gpt-4o"),
             "verbose": True
         },
         "content_ai": {
-            "llm": os.getenv("OPENAI_MODEL_NAME", "gpt-4"),
+            "llm": os.getenv("OPENAI_MODEL_NAME", "gpt-4o"),
             "verbose": True
         }
     }
-    
+
     # Example inputs
     inputs = {
         "publisher_info": {
@@ -60,16 +63,17 @@ def main():
             "special_requirements": "Include case studies and ROI metrics"
         }
     }
-    
+
     # Create and run orchestrator
     orchestrator = VerticalLabsOrchestrator(config)
     results = orchestrator.run_full_pipeline(inputs)
-    
+
     # Print results summary
     print("\nResults Summary:")
     print(f"Topics Generated: {len(results['topics'].get('topics', []))}")
     print(f"Pitches Created: {len(results['pitches'].get('pitches', []))}")
     print(f"Content Pieces: {len(results['content'])}")
-    
+
+
 if __name__ == "__main__":
     main()
