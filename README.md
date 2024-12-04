@@ -1,71 +1,116 @@
 # Vertical Labs Multi-Agent System
 
-A multi-agentic system using CrewAI Flows for generating topics, creating pitches, and producing content at scale. Features sequential and parallel execution, state management, and flow visualization.
+A multi-agent content generation system using CrewAI Flows and Streamlit. This system automates the process of analyzing publishers, generating topics, developing pitches, and creating content through a coordinated workflow of specialized AI agents.
 
 ## Overview
 
-The system uses CrewAI Flows to orchestrate three specialized crews in a coordinated workflow:
-
-1. **TopicsAI Crew** (First Stage)
-   - Generates relevant topics for publishers
-   - Analyzes trends and audience needs
-   - Ensures topic diversity and quality
-   - Agents:
-     - Topic Researcher
-     - Audience Analyst
-     - Content Strategist
-     - SEO Specialist
-     - Quality Assurer
-     - Topic Coordinator
-
-2. **ContentAI Crew** (Second Stage)
-   - Produces high-quality content for each topic
-   - Ensures editorial standards
-   - Optimizes for engagement
-   - Agents:
-     - Content Researcher
-     - Content Writer
-     - Content Editor
-     - Content Optimizer
-     - Content Coordinator
-
-3. **PitchAI Crew** (Third Stage)
-   - Creates compelling PR pitches for content
-   - Matches content with publishers
-   - Optimizes pitches for success
-   - Agents:
-     - Brand Analyst
-     - Pitch Writer
-     - Media Relations Specialist
-     - Pitch Coordinator
-
-## Flow Architecture
-
-The system uses CrewAI's Flow pattern to manage the interaction between crews:
-
 ```mermaid
 graph TD
-    A[TopicsAI Crew] -->|Topics| B[ContentAI Crew]
-    B -->|Content| C[PitchAI Crew]
+    A[TopicsAI Crew] -->|Topics| B[PitchAI Crew]
+    B -->|Pitches| C[ContentAI Crew]
     D[State Management] -->|Domain Info| A
     D -->|Content Goals| B
     D -->|Target Audience| C
 ```
 
-Key Features:
+The system consists of a Streamlit dashboard interface and three specialized CrewAI crews working in sequence:
 
-- Centralized state management using Pydantic models
-- Sequential execution with data dependencies
-- Parallel content generation for multiple topics
-- Flow visualization for monitoring and debugging
+1. **TopicsAI Crew** (First Stage)
+   - Analyzes publisher websites to understand content strategy
+   - Generates relevant topics based on publisher analysis
+   - Ensures topic diversity and quality
+   - Agents:
+     - Website Analysis Expert: Analyzes publisher content strategy
+     - Topic Research Specialist: Investigates trends and opportunities
+     - Audience Analysis Expert: Analyzes audience preferences
+     - Content Strategy Specialist: Develops content guidelines
+     - Quality Assurance Specialist: Ensures topic diversity
+     - Topic Coordination Manager: Oversees topic generation
+
+2. **PitchAI Crew** (Second Stage)
+   - Develops targeted pitches for selected topics
+   - Optimizes for publisher preferences
+   - Ensures strategic alignment
+   - Agents:
+     - Brand Analysis Specialist: Analyzes brand-publisher fit
+     - Pitch Writing Expert: Creates compelling pitches
+     - Media Relations Specialist: Optimizes publisher alignment
+     - Pitch Coordination Manager: Oversees pitch delivery
+
+3. **ContentAI Crew** (Third Stage)
+   - Creates high-quality content for approved pitches
+   - Maintains editorial standards and brand voice
+   - Optimizes content for engagement
+   - Agents:
+     - Content Researcher: Gathers topic information
+     - Content Writer: Creates engaging content
+     - Content Editor: Ensures quality and accuracy
+     - Content Optimizer: Enhances content impact
+     - Content Coordinator: Manages content workflow
+
+## Features
+
+- **Interactive Dashboard**
+  - Step-by-step workflow visualization
+  - Real-time progress tracking
+  - Agent conversation monitoring
+  - Topic and pitch selection interface
+
+- **Publisher Analysis**
+  - Website content analysis
+  - Audience targeting
+  - Content strategy evaluation
+  - Geographic coverage assessment
+
+- **Topic Generation**
+  - Trend analysis
+  - Keyword research
+  - Content gap identification
+  - Quality assurance checks
+
+- **Pitch Development**
+  - Brand-publisher matching
+  - Pitch optimization
+  - Media relations insights
+  - Delivery scheduling
+
+- **Content Creation**
+  - Research-driven content
+  - Editorial guidelines compliance
+  - SEO optimization
+  - Quality control
+
+## Installation
+
+Ensure you have Python >=3.10 <=3.13 installed on your system.
+
+1. Clone the repository:
+
+```bash
+git clone [repository-url]
+cd multi-agent-system
+```
+
+2. Create and activate a virtual environment:
+
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
 
 ## Configuration
 
-Create a `.env` file with the following variables:
+Create a `.env` file in the project root with your API keys:
 
 ```env
 OPENAI_API_KEY=your_openai_api_key
-OPENAI_MODEL_NAME=gpt-4o
+OPENAI_MODEL_NAME=gpt-4
 APIFY_API_TOKEN=your_apify_token
 DATAFORSEO_LOGIN=your_dataforseo_login
 DATAFORSEO_PASSWORD=your_dataforseo_password
@@ -74,74 +119,77 @@ DIFFBOT_API_KEY=your_diffbot_key
 
 ## Usage
 
-### Basic Usage
+### Running the Dashboard
+
+Start the Streamlit dashboard:
+
+```bash
+streamlit run src/vertical_labs/app.py
+```
+
+The dashboard provides a four-step workflow:
+
+1. Publisher Analysis: Enter publisher details
+2. Topic Selection: Choose topics to develop
+3. Pitch Selection: Select pitches to create
+4. Content Generation: View generated content
+
+### Programmatic Usage
 
 ```python
-from vertical_labs.flow import kickoff, plot
-
-# Define your inputs
-domain = "Enterprise AI Solutions"
-target_audience = """
-    B2B audience including CTOs, Tech Leaders, and Developers
-    in Software and AI/ML industries, primarily in USA and Canada.
-    Looking for professional, analytical content with data-backed insights.
-"""
-content_goals = """
-    Create thought leadership and technical analysis content that:
-    - Demonstrates expertise in enterprise-grade AI solutions
-    - Includes case studies and ROI metrics
-    - Maintains professional tone and analytical style
-    - Targets content length of 1000-1500 words
-    - Emphasizes human-centric design in AI implementations
-"""
+from vertical_labs.main import kickoff
 
 # Run the flow
 results = kickoff(
-    domain=domain,
-    target_audience=target_audience,
-    content_goals=content_goals
+    publisher_name="TechCrunch",
+    publisher_url="https://techcrunch.com",
+    publisher_categories=["Technology", "Startups", "AI/ML"],
+    publisher_audience="Tech professionals, entrepreneurs",
+    publisher_locations=["Global", "USA"],
+    domain="Enterprise AI Solutions",
+    target_audience="B2B audience including CTOs, Tech Leaders",
+    content_goals="""
+    Create thought leadership content that:
+    - Demonstrates expertise in AI solutions
+    - Includes case studies and metrics
+    - Maintains professional tone
+    """
 )
 
 # Access results
 print(f"Topics Generated: {len(results.topics)}")
-print(f"Content Pieces: {len(results.content_items)}")
 print(f"Pitches Created: {len(results.pitches)}")
-
-# Visualize the flow
-plot()
+print(f"Content Pieces: {len(results.content_items)}")
 ```
 
-### Installation
+## Architecture
 
-Ensure you have Python >=3.10 <=3.13 installed on your system. First, if you haven't already, install CrewAI:
+The system uses a flow-based architecture with these key components:
 
-```bash
-pip install crewai
-```
+1. **Flow Manager**
+   - Coordinates crew execution sequence
+   - Manages state using Pydantic models
+   - Handles data flow between crews
+   - Provides progress tracking
 
-Next, navigate to your project directory and install the dependencies:
+2. **Streamlit Dashboard**
+   - User interface for system interaction
+   - Real-time progress visualization
+   - Agent conversation display
+   - Result presentation
 
-```bash
-crewai install
-```
+3. **Specialized Crews**
+   - TopicsAI: Publisher analysis and topic generation
+   - PitchAI: Pitch development and optimization
+   - ContentAI: Content creation and refinement
 
-### Running the Project
+4. **State Management**
+   - Pydantic models for data validation
+   - Centralized state tracking
+   - Inter-crew data sharing
+   - Progress monitoring
 
-To kickstart your crew of AI agents and begin task execution, run this from the root folder:
-
-```bash
-crewai flow kickoff
-```
-
-To visualize the flow structure:
-
-```bash
-crewai flow plot
-```
-
-### Flow State
-
-The system uses Pydantic models to manage state:
+## Data Models
 
 ```python
 class Topic(BaseModel):
@@ -149,175 +197,23 @@ class Topic(BaseModel):
     description: str
     keywords: List[str]
 
-class ContentItem(BaseModel):
-    title: str
-    content: str
-    metadata: dict
-
 class Pitch(BaseModel):
     title: str
     pitch: str
     target_audience: str
 
-class VerticalLabsState(BaseModel):
-    topics: List[Topic] = []
-    content_items: List[ContentItem] = []
-    pitches: List[Pitch] = []
-    domain: str = ""
-    target_audience: str = ""
-    content_goals: str = ""
-```
+class ContentItem(BaseModel):
+    title: str
+    content: str
+    metadata: Dict
 
-## Architecture
-
-The system uses a flow-based architecture with these components:
-
-1. **Flow Manager**: Coordinates the execution sequence and state management
-   - Handles data flow between crews
-   - Manages shared state using Pydantic models
-   - Provides flow visualization
-   - Supports parallel execution where possible
-
-2. **Crews**: Specialized teams with specific responsibilities
-   - TopicsAI: First stage, generates topics
-   - ContentAI: Second stage, creates content
-   - PitchAI: Third stage, develops pitches
-   - Each crew operates independently but shares state
-
-3. **Agents**: Individual AI agents with specific roles
-   - Each agent has a defined responsibility
-   - Agents communicate within their crew
-   - Access to shared tools and resources
-
-4. **Tools**: Shared utilities across crews
-   - Each tool serves a specific purpose
-   - Tools can be used by any agent
-   - Results are stored in shared state
-
-## Tools
-
-- **News Tools**
-  - TwitterTrendsTool: Fetches trending topics
-  - NewsScraperTool: Gathers news articles
-  - GoogleNewsTool: Searches Google News
-
-- **Content Tools**
-  - WebsiteAnalyzerTool: Analyzes website content
-  - EditorialGuidelinesTool: Manages content guidelines
-  - ContentDiversityTool: Ensures content variety
-
-- **Pitch Tools**
-  - PitchGeneratorTool: Creates PR pitches
-  - BrandMatchingTool: Matches brands with opportunities
-  - PitchOptimizationTool: Optimizes pitch success
-
-## Advanced Features
-
-### Flow Execution
-
-The system supports both sequential and parallel execution:
-
-```python
-from vertical_labs.flow import VerticalLabsFlow
-
-# Create a custom flow
-class CustomFlow(VerticalLabsFlow):
-    @start()
-    def discover_topics(self):
-        return TopicsCrew().crew().kickoff(inputs={
-            "domain": self.state.domain
-        })
-
-    @listen(discover_topics)
-    async def generate_content(self):
-        tasks = []
-        for topic in self.state.topics:
-            # Content generation runs in parallel
-            task = ContentCrew().crew().kickoff(inputs={
-                "topic": topic.title,
-                "content_goals": self.state.content_goals
-            })
-            tasks.append(task)
-        return await asyncio.gather(*tasks)
-
-    @listen(generate_content)
-    def create_pitches(self):
-        return PitchCrew().crew().kickoff(inputs={
-            "content": self.state.content_items,
-            "target_audience": self.state.target_audience
-        })
-
-# Run the flow
-flow = CustomFlow()
-flow.kickoff()
-```
-
-### Flow Monitoring
-
-Monitor flow execution and visualize the process:
-
-```python
-from vertical_labs.flow import VerticalLabsFlow
-
-# Enable detailed logging
-flow = VerticalLabsFlow(verbose=True)
-
-# Run with monitoring
-results = flow.kickoff()
-
-# Generate flow visualization
-flow.plot()
-
-# Get execution metrics
-metrics = flow.get_metrics()
-print(f"Total Execution Time: {metrics.total_time}")
-print(f"Topics Generated: {len(results.topics)}")
-print(f"Success Rate: {metrics.success_rate}%")
-```
-
-### State Management
-
-The flow maintains state throughout execution:
-
-```python
-from vertical_labs.flow import VerticalLabsFlow
-
-class CustomFlow(VerticalLabsFlow):
-    def __init__(self):
-        # Initialize with custom state
-        super().__init__(
-            initial_state=VerticalLabsState(
-                domain="AI Technology",
-                target_audience="Enterprise CTOs",
-                content_goals="Technical deep dives"
-            )
-        )
-    
-    @start()
-    def begin_flow(self):
-        # Access state anywhere in the flow
-        print(f"Starting flow for domain: {self.state.domain}")
-        
-        # Update state as needed
-        self.state.topics.append(Topic(
-            title="AI Trends 2024",
-            description="Analysis of emerging AI trends",
-            keywords=["AI", "trends", "2024"]
-        ))
-        
-        return self.state.topics
-```
-
-## Testing
-
-Run the test suite:
-
-```bash
-# Install test dependencies
-poetry install --with=dev
-
-# Run tests
-pytest tests/
+class PublisherInfo(BaseModel):
+    name: str
+    url: str
+    categories: List[str]
+    audience: str
+    locations: List[str]
+    preferences: Optional[Dict] = {}
 ```
 
 ## Contributing
@@ -331,3 +227,7 @@ pytest tests/
 ## License
 
 MIT License
+
+## Support
+
+For support, please open an issue in the GitHub repository or contact the development team.
