@@ -1,6 +1,5 @@
 """Main entry point for Vertical Labs."""
 
-import os
 from typing import Callable, Dict, List, Optional
 
 from crewai.flow.flow import Flow, listen, start
@@ -53,78 +52,6 @@ class VerticalLabsState(BaseModel):
     target_audience: str = ""
     content_goals: str = ""
     publisher: Optional[PublisherInfo] = None
-    progress_callback: Optional[Callable] = None
-
-
-class VerticalLabsOrchestrator:
-    """Orchestrator for managing all Vertical Labs crews."""
-
-    def __init__(self, config: Dict):
-        """Initialize the orchestrator."""
-        self.config = config
-        self.topics_crew = TopicsAICrew(config.get("topics_ai", {}))
-        self.pitch_crew = PitchAICrew(config.get("pitch_ai", {}))
-        self.content_crew = ContentAICrew(config.get("content_ai", {}))
-
-    def run_topics_generation(self, inputs: Dict) -> Dict:
-        """Run the TopicsAI crew to generate topics."""
-        return self.topics_crew.run(inputs)
-
-    def run_pitch_generation(self, inputs: Dict) -> Dict:
-        """Run the PitchAI crew to generate pitches."""
-        return self.pitch_crew.run(inputs)
-
-    def run_content_generation(self, inputs: Dict) -> Dict:
-        """Run the ContentAI crew to generate content."""
-        return self.content_crew.run(inputs)
-
-    def run_full_pipeline(self, inputs: Dict) -> Dict:
-        """Run the complete pipeline from topics to content."""
-        # Generate topics
-        topics_result = self.run_topics_generation(
-            {
-                "publisher_name": inputs["publisher_info"]["name"],
-                "publisher_url": inputs["publisher_info"]["url"],
-                "categories": inputs["publisher_info"]["categories"],
-                "audience": inputs["publisher_info"]["audience"],
-                "locations": inputs["publisher_info"]["locations"],
-            }
-        )
-
-        # Generate pitches for the topics
-        pitch_result = self.run_pitch_generation(
-            {
-                "topics": topics_result["topics"],
-                "brand_info": inputs["brand_info"],
-                "publishers": [inputs["publisher_info"]],
-                "preferences": inputs["publisher_info"].get("preferences", {}),
-            }
-        )
-
-        # Generate content for accepted pitches
-        content_results = []
-        for pitch in pitch_result["pitches"]:
-            if pitch.get("status") == "accepted":
-                content_result = self.run_content_generation(
-                    {
-                        "topic": pitch["topic"],
-                        "guidelines": topics_result["metadata"]["guidelines"],
-                        "brand_info": inputs["brand_info"],
-                        "publisher": inputs["publisher_info"],
-                    }
-                )
-                content_results.append(content_result)
-
-        return {
-            "topics": topics_result,
-            "pitches": pitch_result,
-            "content": content_results,
-            "metadata": {
-                "publisher": inputs["publisher_info"],
-                "brand": inputs["brand_info"],
-                "requirements": inputs["requirements"],
-            },
-        }
 
 
 class VerticalLabsFlow(Flow[VerticalLabsState]):
@@ -153,12 +80,9 @@ class VerticalLabsFlow(Flow[VerticalLabsState]):
                 "publisher": (
                     self.state.publisher.model_dump() if self.state.publisher else None
                 ),
-                "agents_config": os.path.join(
-                    "src/vertical_labs/crews/topics/config", "agents.yaml"
-                ),
-                "tasks_config": os.path.join(
-                    "src/vertical_labs/crews/topics/config", "tasks.yaml"
-                ),
+                "agents_config": "agents.yaml",
+                "tasks_config": "tasks.yaml",
+                "progress_callback": self.progress_callback,
             }
 
         if not self.content_crew:
@@ -168,12 +92,9 @@ class VerticalLabsFlow(Flow[VerticalLabsState]):
                 "publisher": (
                     self.state.publisher.model_dump() if self.state.publisher else None
                 ),
-                "agents_config": os.path.join(
-                    "src/vertical_labs/crews/content/config", "agents.yaml"
-                ),
-                "tasks_config": os.path.join(
-                    "src/vertical_labs/crews/content/config", "tasks.yaml"
-                ),
+                "agents_config": "agents.yaml",
+                "tasks_config": "tasks.yaml",
+                "progress_callback": self.progress_callback,
             }
 
         if not self.pitch_crew:
@@ -183,12 +104,9 @@ class VerticalLabsFlow(Flow[VerticalLabsState]):
                 "publisher": (
                     self.state.publisher.model_dump() if self.state.publisher else None
                 ),
-                "agents_config": os.path.join(
-                    "src/vertical_labs/crews/pitch/config", "agents.yaml"
-                ),
-                "tasks_config": os.path.join(
-                    "src/vertical_labs/crews/pitch/config", "tasks.yaml"
-                ),
+                "agents_config": "agents.yaml",
+                "tasks_config": "tasks.yaml",
+                "progress_callback": self.progress_callback,
             }
 
     @start()
@@ -208,6 +126,7 @@ class VerticalLabsFlow(Flow[VerticalLabsState]):
                         if self.state.publisher
                         else None
                     ),
+                    "progress_callback": self.progress_callback,
                 }
             )
 
@@ -227,6 +146,54 @@ class VerticalLabsFlow(Flow[VerticalLabsState]):
         except Exception as e:
             self._update_progress(
                 "topics", "Error", f"Error in topic discovery: {str(e)}"
+            )
+            raise
+
+    @listen(discover_topics)
+    async def generate_content(self):
+        """Generate content for discovered topics."""
+        self._update_progress("content", "In Progress", "Starting Content Generation")
+        print("Generating Content")
+        self._init_crews()
+        content_items = []
+
+        try:
+            for i, topic in enumerate(self.state.topics, 1):
+                self._update_progress(
+                    "content",
+                    "In Progress",
+                    f"Generating content for topic {i}/{len(self.state.topics)}",
+                )
+                output = self.content_crew.run(
+                    {
+                        "topic": topic.title,
+                        "description": topic.description,
+                        "keywords": topic.keywords,
+                        "content_goals": self.state.content_goals,
+                        "publisher": (
+                            self.state.publisher.model_dump()
+                            if self.state.publisher
+                            else None
+                        ),
+                        "progress_callback": self.progress_callback,
+                    }
+                )
+
+                content_item = ContentItem(
+                    title=output["title"],
+                    content=output["content"],
+                    metadata=output["metadata"],
+                )
+                content_items.append(content_item)
+
+            self.state.content_items = content_items
+            self._update_progress(
+                "content", "Complete", f"Generated {len(content_items)} content pieces"
+            )
+            return self.state.content_items
+        except Exception as e:
+            self._update_progress(
+                "content", "Error", f"Error in content generation: {str(e)}"
             )
             raise
 
@@ -255,6 +222,7 @@ class VerticalLabsFlow(Flow[VerticalLabsState]):
                             if self.state.publisher
                             else None
                         ),
+                        "progress_callback": self.progress_callback,
                     }
                 )
 
@@ -273,53 +241,6 @@ class VerticalLabsFlow(Flow[VerticalLabsState]):
         except Exception as e:
             self._update_progress(
                 "pitches", "Error", f"Error in pitch creation: {str(e)}"
-            )
-            raise
-
-    @listen(create_pitches)
-    async def generate_content(self):
-        """Generate content for discovered topics."""
-        self._update_progress("content", "In Progress", "Starting Content Generation")
-        print("Generating Content")
-        self._init_crews()
-        content_items = []
-
-        try:
-            for i, topic in enumerate(self.state.topics, 1):
-                self._update_progress(
-                    "content",
-                    "In Progress",
-                    f"Generating content for topic {i}/{len(self.state.topics)}",
-                )
-                output = self.content_crew.run(
-                    {
-                        "topic": topic.title,
-                        "description": topic.description,
-                        "keywords": topic.keywords,
-                        "content_goals": self.state.content_goals,
-                        "publisher": (
-                            self.state.publisher.model_dump()
-                            if self.state.publisher
-                            else None
-                        ),
-                    }
-                )
-
-                content_item = ContentItem(
-                    title=output["title"],
-                    content=output["content"],
-                    metadata=output["metadata"],
-                )
-                content_items.append(content_item)
-
-            self.state.content_items = content_items
-            self._update_progress(
-                "content", "Complete", f"Generated {len(content_items)} content pieces"
-            )
-            return self.state.content_items
-        except Exception as e:
-            self._update_progress(
-                "content", "Error", f"Error in content generation: {str(e)}"
             )
             raise
 
@@ -404,8 +325,8 @@ def main():
     # Print results summary
     print("\nResults Summary:")
     print(f"Topics Generated: {len(results.topics)}")
-    print(f"Pitches Created: {len(results.pitches)}")
     print(f"Content Pieces: {len(results.content_items)}")
+    print(f"Pitches Created: {len(results.pitches)}")
 
     # Generate flow visualization
     plot()

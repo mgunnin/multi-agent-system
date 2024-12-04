@@ -1,25 +1,72 @@
+website_analysis_task:
+  description: >
+    First, scrape the publisher's website to gather content and metadata. Then analyze the content to determine:
+    - Main content categories and topics
+    - Target audience characteristics
+    - Writing style and tone
+    - Geographic focus
+    Use both direct website content and search results about the publisher to build a comprehensive profile.
+  expected_output: >
+    A detailed analysis of the publisher's content strategy including:
+    - List of main content categories
+    - Target audience profile
+    - Geographic coverage
+    - Content style and preferences
+  agent: website_analyzer
+  tool_inputs:
+    scrape_website:
+      url: "{{publisher_url}}"
+      elements:
+        - "meta[name='description']"
+        - "meta[name='keywords']"
+        - "nav"
+        - "header"
+        - "main"
+        - "article"
+    exa_search:
+      query: "site:{{publisher_url}} about us OR company profile OR editorial guidelines"
+  output_format:
+    categories: ["string"]
+    audience: "string"
+    locations: ["string"]
+    style_preferences:
+      tone: "string"
+      content_types: ["string"]
+      typical_length: "string"
+
 guidelines_task:
   description: "Develop and store brand voice and content guidelines using the EditorialGuidelinesTool. Consider the publisher's niche, audience, and content strategy."
   expected_output: "A comprehensive set of brand voice guidelines stored for consistent access by all agents."
   agent: content_strategist
+  context:
+    - website_analysis_task
   tool_inputs:
     editorial_guidelines_tool:
       publisher_info:
         name: "{{publisher_name}}"
         type: "{{business_type}}"
-        categories: "{{categories}}"
-        audience: "{{target_audience}}"
-        locations: "{{target_locations}}"
-
-website_analysis_task:
-  description: "Analyze the publisher's website content using WebsiteAnalyzerTool to extract insights about content categories, audience indicators, and content patterns."
-  expected_output: "A detailed analysis of website content, including primary categories and audience indicators."
-  agent: audience_analyst
+        categories: "{{website_analysis_task.categories}}"
+        audience: "{{website_analysis_task.audience}}"
+        locations: "{{website_analysis_task.locations}}"
+        style_preferences: "{{website_analysis_task.style_preferences}}"
 
 trends_research_task:
-  description: "Research current trends and events relevant to the publisher. Focus on trends that align with the publisher's niche."
+  description: >
+    Research current trends and events relevant to the publisher's focus areas. Use EXASearch to:
+    - Find trending topics in their main categories
+    - Identify emerging industry trends
+    - Discover content gaps and opportunities
   expected_output: "A list of current trends, upcoming events, and potential content gaps in the publisher's niche."
   agent: topic_researcher
+  context:
+    - website_analysis_task
+    - guidelines_task
+  tool_inputs:
+    exa_search:
+      queries:
+        - "latest trends {{website_analysis_task.categories}}"
+        - "upcoming events {{website_analysis_task.categories}}"
+        - "industry news {{website_analysis_task.categories}}"
 
 topic_generation_task:
   description: "Generate and score initial topic ideas ensuring alignment with audience interests and current trends. Consider the website analysis and trends research results."
@@ -27,6 +74,7 @@ topic_generation_task:
   agent: content_strategist
   context:
     - website_analysis_task
+    - guidelines_task
     - trends_research_task
   output_format:
     topics:
@@ -59,6 +107,8 @@ final_compilation_task:
   expected_output: "A prioritized list of topic suggestions ready for implementation."
   agent: topic_coordinator
   context:
+    - website_analysis_task
+    - guidelines_task
     - diversity_check_task
   output_format:
     topics:
@@ -71,3 +121,4 @@ final_compilation_task:
           audience_appeal: "number"
           seo_potential: "number"
           diversity_score: "number"
+          publisher_match: "number"
