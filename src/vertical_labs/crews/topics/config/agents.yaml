@@ -4,11 +4,6 @@ website_analyzer:
   backstory: "As a Website Analysis Expert, I specialize in understanding digital content strategies and audience targeting through comprehensive website analysis. I use advanced tools to extract meaningful insights about content patterns, audience engagement, and editorial focus."
   allow_delegation: true
   verbose: true
-  tools:
-    - name: "ScrapeWebsiteTool"
-      description: "Extract content and metadata from publisher websites"
-    - name: "EXASearchTool"
-      description: "Research publisher information and content strategy"
 
 topic_researcher:
   role: "Topic Research Specialist"
@@ -16,9 +11,6 @@ topic_researcher:
   backstory: "With years of experience in trend analysis and content research, I excel at identifying emerging topics and content gaps. I combine data analysis with industry insights to uncover valuable content opportunities."
   allow_delegation: true
   verbose: true
-  tools:
-    - name: "EXASearchTool"
-      description: "Research industry trends and topic opportunities"
 
 audience_analyst:
   role: "Audience Analysis Expert"
@@ -33,9 +25,6 @@ content_strategist:
   backstory: "As a Content Strategy Specialist, I bring extensive experience in content planning and editorial strategy. I ensure topics align with brand voice, audience needs, and content goals while maintaining editorial quality."
   allow_delegation: true
   verbose: true
-  tools:
-    - name: "EditorialGuidelinesTool"
-      description: "Generate and manage content guidelines"
 
 quality_assurer:
   role: "Quality Assurance Specialist"
@@ -43,9 +32,6 @@ quality_assurer:
   backstory: "With a keen eye for detail and quality, I review and validate topic suggestions to ensure they meet quality standards and offer diverse, engaging content options."
   allow_delegation: true
   verbose: true
-  tools:
-    - name: "ContentDiversityTool"
-      description: "Analyze and ensure content diversity"
 
 topic_coordinator:
   role: "Topic Coordination Manager"
@@ -53,6 +39,3 @@ topic_coordinator:
   backstory: "I oversee the entire topic generation workflow, ensuring seamless collaboration between team members and delivering well-curated topic suggestions that meet all requirements."
   allow_delegation: true
   verbose: true
-  communication:
-    style: "Professional and clear"
-    format: "Structured updates with clear action items"

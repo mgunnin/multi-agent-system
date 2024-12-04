@@ -111,10 +111,6 @@ Create a `.env` file in the project root with your API keys:
 ```env
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL_NAME=gpt-4
-APIFY_API_TOKEN=your_apify_token
-DATAFORSEO_LOGIN=your_dataforseo_login
-DATAFORSEO_PASSWORD=your_dataforseo_password
-DIFFBOT_API_KEY=your_diffbot_key
 ```
 
 ## Usage

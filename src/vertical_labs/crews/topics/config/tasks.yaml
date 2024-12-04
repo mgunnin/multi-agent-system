@@ -13,42 +13,12 @@ website_analysis_task:
     - Geographic coverage
     - Content style and preferences
   agent: website_analyzer
-  tool_inputs:
-    scrape_website:
-      url: "{{publisher_url}}"
-      elements:
-        - "meta[name='description']"
-        - "meta[name='keywords']"
-        - "nav"
-        - "header"
-        - "main"
-        - "article"
-    exa_search:
-      query: "site:{{publisher_url}} about us OR company profile OR editorial guidelines"
-  output_format:
-    categories: ["string"]
-    audience: "string"
-    locations: ["string"]
-    style_preferences:
-      tone: "string"
-      content_types: ["string"]
-      typical_length: "string"
 
 guidelines_task:
   description: "Develop and store brand voice and content guidelines using the EditorialGuidelinesTool. Consider the publisher's niche, audience, and content strategy."
   expected_output: "A comprehensive set of brand voice guidelines stored for consistent access by all agents."
   agent: content_strategist
-  context:
-    - website_analysis_task
-  tool_inputs:
-    editorial_guidelines_tool:
-      publisher_info:
-        name: "{{publisher_name}}"
-        type: "{{business_type}}"
-        categories: "{{website_analysis_task.categories}}"
-        audience: "{{website_analysis_task.audience}}"
-        locations: "{{website_analysis_task.locations}}"
-        style_preferences: "{{website_analysis_task.style_preferences}}"
+  context: ["website_analysis_task"]
 
 trends_research_task:
   description: >
@@ -58,67 +28,22 @@ trends_research_task:
     - Discover content gaps and opportunities
   expected_output: "A list of current trends, upcoming events, and potential content gaps in the publisher's niche."
   agent: topic_researcher
-  context:
-    - website_analysis_task
-    - guidelines_task
-  tool_inputs:
-    exa_search:
-      queries:
-        - "latest trends {{website_analysis_task.categories}}"
-        - "upcoming events {{website_analysis_task.categories}}"
-        - "industry news {{website_analysis_task.categories}}"
+  context: ["website_analysis_task", "guidelines_task"]
 
 topic_generation_task:
   description: "Generate and score initial topic ideas ensuring alignment with audience interests and current trends. Consider the website analysis and trends research results."
   expected_output: "A list of scored topic ideas with relevance, audience appeal, and SEO potential ratings."
   agent: content_strategist
-  context:
-    - website_analysis_task
-    - guidelines_task
-    - trends_research_task
-  output_format:
-    topics:
-      - topic: "string"
-        score: "number"
-        relevance: "number"
-        audience_appeal: "number"
-        seo_potential: "number"
+  context: ["website_analysis_task", "guidelines_task", "trends_research_task"]
 
 diversity_check_task:
   description: "Review topic suggestions using ContentDiversityTool to ensure diversity in content types and subject matter. Check for duplicates and overlapping themes."
   expected_output: "A validated list of topics ensuring diversity in content types and subject matter."
   agent: quality_assurer
-  context:
-    - topic_generation_task
-  tool_inputs:
-    content_diversity_tool:
-      content_list:
-        - topic: "{{topic}}"
-          content: "{{description}}"
-          metadata:
-            score: "{{score}}"
-            relevance: "{{relevance}}"
-            audience_appeal: "{{audience_appeal}}"
-            seo_potential: "{{seo_potential}}"
-      existing_content: []
+  context: ["topic_generation_task"]
 
 final_compilation_task:
   description: "Compile the final list of topic suggestions ensuring alignment with guidelines and incorporating diversity check results. Prioritize topics based on relevance and potential impact."
   expected_output: "A prioritized list of topic suggestions ready for implementation."
   agent: topic_coordinator
-  context:
-    - website_analysis_task
-    - guidelines_task
-    - diversity_check_task
-  output_format:
-    topics:
-      - title: "string"
-        description: "string"
-        keywords: ["string"]
-        score: "number"
-        metadata:
-          relevance: "number"
-          audience_appeal: "number"
-          seo_potential: "number"
-          diversity_score: "number"
-          publisher_match: "number"
+  context: ["website_analysis_task", "guidelines_task", "diversity_check_task"]
