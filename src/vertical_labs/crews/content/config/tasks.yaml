@@ -1,17 +1,13 @@
-research_task:
-  description: "Research the topic: {topic}
-    1. Identify key themes and insights
-    2. Gather supporting data and examples
-    3. Validate information from multiple sources
-    4. Compile findings in a structured format."
-  expected_output: "A comprehensive research package including main themes and insights, supporting data points, credible sources used, and potential angles for content development."
+content_research:
+  description: "Conduct thorough research on the topic at hand, focusing on identifying and analyzing key themes and insights that emerge from the literature. Gather robust supporting data and relevant examples to strengthen your findings. Additionally, ensure the accuracy and reliability of the information by cross-referencing and validating it with multiple credible sources. This comprehensive approach will help create a well-rounded understanding of the subject."
+  expected_output: "A detailed research package that includes main themes and insights, relevant data points, credible sources, and potential content development angles."
   agent: content_researcher
 
 content_writing_task:
   description: "Write engaging content based on the research package and editorial guidelines. Structure content for readability and impact while maintaining the required tone and style."
   expected_output: "A well-structured draft that incorporates research findings and follows editorial guidelines."
   agent: content_writer
-  context: ["research_task"]
+  context: ["content_research"]
 
 editing_task:
   description: "Review and edit the content for clarity, accuracy, and style. Ensure compliance with editorial guidelines and brand standards. Check grammar, tone, and flow."
@@ -25,7 +21,7 @@ optimization_task:
   agent: content_optimizer
   context: ["editing_task"]
 
-final_review_task:
+content_review:
   description: "Conduct final review of the optimized content. Ensure all elements are in place and the content is ready for publication. Prepare content package with metadata."
   expected_output: "Publication-ready content package with all necessary metadata and supporting materials."
   agent: content_coordinator

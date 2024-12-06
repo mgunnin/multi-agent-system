@@ -1,22 +1,22 @@
 brand_analysis_task:
-  description: "Analyze the brand's fit with available topics and publishers using the BrandMatchingTool. Consider brand values, target market, and unique selling propositions."
-  expected_output: "A prioritized list of brand-topic-publisher matches with detailed rationale for each match."
+  description: "Conduct a thorough analysis of how {brand_name} aligns with the topics currently offered and the editorial style of {publisher_name}. This evaluation should include a close examination of {brand_name}'s core values, target audience demographics, and distinct selling propositions. Additionally, it's essential to review and consider any specific editorial guidelines provided by {publisher_name} to ensure that the content not only resonates with {brand_name}'s message but also adheres to the standards and tone expected by the publisher. This comprehensive review will help determine the compatibility and potential effectiveness of collaboration between {brand_name} and {publisher_name}."
+  expected_output: "A comprehensive, prioritized list of matches that aligns {brand_name} with relevant topics and {publisher_name}. Each pairing will be accompanied by an in-depth explanation detailing the reasoning behind the match, highlighting the significance of the connection and how it benefits both the brand and the publisher."
   agent: brand_analyst
 
 pitch_writing_task:
-  description: "Create compelling PR pitches for the high-priority matches using PitchGeneratorTool. Ensure each pitch highlights the unique value proposition and aligns with the topic."
-  expected_output: "A set of initial PR pitches with subject lines, body content, and calls to action."
+  description: "Craft compelling public relations pitches that highlight the distinct advantages of the product or service, clearly articulating its unique value proposition. Ensure that the messaging closely aligns with the core themes of the topic at hand, effectively addressing the target audience's needs and interests. Consider incorporating relevant data, anecdotes, or testimonials that reinforce the product's benefits, making the pitch not only persuasive but also resonant with the audience."
+  expected_output: "The objective is to create a set of initial PR pitches that effectively communicate our brand's message and generate interest among media contacts. These pitches should include engaging subject lines under 50 characters to capture attention, concise body content no longer than 200 words that highlights the key points of our story or announcement, along with relevant details, statistics, or quotes to enhance credibility. It's crucial to incorporate clear calls to action that encourage specific steps, such as visiting a website or scheduling an interview. We must identify the target audience by tailoring pitches to specific media outlets or journalists based on their interests and previous coverage, maintaining a professional yet approachable tone that aligns with our brand voice. Additionally, it’s helpful to provide examples of successful PR pitches from similar campaigns for inspiration, and we should review the pitches for clarity, grammar, and adherence to brand guidelines before finalizing. Lastly, a timeline for completing the pitches and necessary follow-up actions should be established."
   agent: pitch_writer
   context: ["brand_analysis_task"]
 
 pitch_optimization_task:
-  description: "Optimize each pitch using PitchOptimizationTool based on publisher preferences and historical data. Refine language, structure, and timing for maximum impact."
-  expected_output: "A set of optimized pitches with publisher-specific adjustments and timing recommendations."
+  description: "Enhance each pitch by tailoring it to align with the specific preferences of the publisher, utilizing insights from historical data to inform decisions. Carefully refine the language to resonate with the target audience, ensuring clarity and engagement. Additionally, consider the structure of the pitch, organizing it in a way that flows logically and captivates the reader’s attention from the outset. Finally, optimize the timing of the pitch delivery, taking into account any relevant industry trends or seasonal factors that may influence receptiveness, to achieve maximum impact and increase the chances of success."
+  expected_output: "A comprehensive collection of tailored pitches designed specifically for each publisher, incorporating unique adjustments to align with their preferences and editorial guidelines. This set also includes strategic timing recommendations to enhance the likelihood of successful engagement and placement."
   agent: media_relations_specialist
   context: ["pitch_writing_task"]
 
-final_review_task:
-  description: "Review and finalize all pitches ensuring quality, consistency, and strategic alignment. Prepare delivery schedule and tracking system."
-  expected_output: "Final pitch package with delivery schedule and success metrics tracking plan."
+pitch_review:
+  description: "Conduct a thorough review of all submitted pitches, focusing on quality, consistency, and alignment with our strategic objectives. This includes verifying the content for clarity, accuracy, and adherence to brand standards. After the review, finalize each pitch to ensure they effectively communicate the intended message."
+  expected_output: "A comprehensive delivery schedule that outlines key milestones and deadlines for each pitch, along with a robust tracking system to monitor progress and ensure timely delivery. This system should include mechanisms for feedback and adjustments as needed to enhance the effectiveness of our proposals."
   agent: pitch_coordinator
   context: ["pitch_optimization_task"]

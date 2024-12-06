@@ -63,3 +63,26 @@ class ApifyTwitterTrendsScraper(BaseTool):
         url = f"https://api.apify.com/v2/acts/karamelo~twitter-trends-scraper/run-sync-get-dataset-items?token={api_token}"
         response = requests.post(url, json={"country": country})
         return response.json()
+
+
+# UltimateNewsTool
+class ApifyUltimateNewsTool(BaseTool):
+    name: str = "Recent News Fetcher"
+    description: str = "Fetches recent news using Ultimate News Scraper"
+
+    def _run(self, date_range: str) -> Dict:
+        """
+        Fetches recent news using Ultimate News Scraper
+        Args:
+            date_range (str): Date range in format YYYY-MM-DD/YYYY-MM-DD
+        Returns:
+            Dict: Recent news articles and their metadata
+        """
+        headers = {"Authorization": f'Bearer {os.environ["APIFY_API_KEY"]}'}
+
+        response = requests.post(
+            "https://api.apify.com/v2/acts/glitch_404~ultimate-news-scraper/runs",
+            headers=headers,
+            json={"dateRange": date_range},
+        )
+        return response.json()

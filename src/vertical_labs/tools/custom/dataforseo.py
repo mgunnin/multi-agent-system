@@ -39,3 +39,25 @@ class DataForSEOGoogleNews(BaseTool):
         }
         response = requests.post(url, auth=auth, json=data)
         return response.json().get("tasks", [])
+
+
+class DataForSEOToolGoogleNewsV2(BaseTool):
+    name: str = "News Article Fetcher"
+    description: str = "Fetches news articles using DataForSEO API"
+
+    def _run(self, keyword: str) -> Dict:
+        """
+        Fetches news articles using DataForSEO API
+        Args:
+            keyword (str): Keyword to search for
+        Returns:
+            Dict: News articles and their metadata
+        """
+        headers = {"Authorization": f'Basic {os.environ["DATAFORSEO_API_KEY"]}'}
+
+        response = requests.post(
+            "https://api.dataforseo.com/v3/serp/google/news/live/advanced",
+            headers=headers,
+            json={"keyword": keyword, "language_code": "en", "location_code": 2840},
+        )
+        return response.json()

@@ -32,27 +32,6 @@ class EditorialGuidelinesSchema(BaseModel):
     )
 
 
-class ContentItem(BaseModel):
-    """Content item schema."""
-
-    topic: str = Field(description="The topic of the content")
-    content: Optional[str] = Field(default="", description="The content text")
-    metadata: Optional[Dict] = Field(
-        default_factory=dict, description="Additional metadata about the content"
-    )
-
-
-class ContentDiversitySchema(BaseModel):
-    """Schema for ContentDiversityTool arguments."""
-
-    content_list: List[ContentItem] = Field(
-        description="List of content items to analyze"
-    )
-    existing_content: Optional[List[ContentItem]] = Field(
-        default=None, description="Optional list of existing content to check against"
-    )
-
-
 class EditorialGuidelinesTool(BaseTool):
     """Tool for generating and managing editorial guidelines."""
 
@@ -106,6 +85,32 @@ class EditorialGuidelinesTool(BaseTool):
             "title_length": "50-60 characters",
             "heading_structure": "one H1, multiple H2s and H3s",
         }
+
+
+class ContentItem(BaseModel):
+    """Content item schema."""
+
+    title: str = Field(description="The title of the content")
+    content: Optional[str] = Field(default="", description="The content text")
+    metadata: Optional[Dict] = Field(
+        default_factory=dict, description="Additional metadata about the content"
+    )
+
+    @property
+    def topic(self) -> str:
+        """Get the topic from the title."""
+        return self.title
+
+
+class ContentDiversitySchema(BaseModel):
+    """Schema for ContentDiversityTool arguments."""
+
+    content_list: List[ContentItem] = Field(
+        description="List of content items to analyze"
+    )
+    existing_content: Optional[List[ContentItem]] = Field(
+        default=None, description="Optional list of existing content to check against"
+    )
 
 
 class ContentDiversityTool(BaseTool):

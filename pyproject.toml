@@ -1,9 +1,9 @@
 [project]
 name = "vertical-labs"
 version = "0.1.0"
-description = "Multi-agentic system using CrewAI for Vertical Labs"
+description = "Multi-agentic system using CrewAI for SearchEye"
 authors = [
-    { name = "OpenHands", email = "openhands@all-hands.dev" }
+    { name = "Vertical Labs", email = "matt@verticallabs.ai" }
 ]
 requires-python = ">=3.10,<=3.13"
 dependencies = [

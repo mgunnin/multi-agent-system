@@ -4,10 +4,15 @@ from typing import Dict
 
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
+from dotenv import load_dotenv
 
-from vertical_labs.tools.pitch_tools import (BrandMatchingTool,
-                                           PitchGeneratorTool,
-                                           PitchOptimizationTool)
+from vertical_labs.tools.pitch_tools import (
+    BrandMatchingTool,
+    PitchGeneratorTool,
+    PitchOptimizationTool,
+)
+
+load_dotenv()
 
 
 @CrewBase
@@ -77,11 +82,11 @@ class PitchAICrew:
         )
 
     @task
-    def final_review_task(self) -> Task:
+    def pitch_review(self) -> Task:
         """Task for final review of pitches."""
         return Task(
-            name="final_review_task",
-            config=self.tasks_config["final_review_task"],
+            name="pitch_review",
+            config=self.tasks_config["pitch_review"],
         )
 
     @crew
@@ -119,9 +124,9 @@ class PitchAICrew:
 
         # Process and structure the results
         return {
-            "pitches": results.get("final_review_task", []),
+            "pitches": results.get("pitch_review", []),
             "metadata": {
                 "brand_matches": results.get("brand_analysis_task", {}),
-                "optimization_insights": results.get("pitch_optimization_task", {})
-            }
+                "optimization_insights": results.get("pitch_optimization_task", {}),
+            },
         }

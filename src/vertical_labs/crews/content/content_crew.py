@@ -4,9 +4,14 @@ from typing import Dict
 
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
+from dotenv import load_dotenv
 
-from vertical_labs.tools.content_tools import (ContentDiversityTool,
-                                             EditorialGuidelinesTool)
+from vertical_labs.tools.content_tools import (
+    ContentDiversityTool,
+    EditorialGuidelinesTool,
+)
+
+load_dotenv()
 
 
 @CrewBase
@@ -61,11 +66,11 @@ class ContentAICrew:
         )
 
     @task
-    def research_task(self) -> Task:
+    def content_research(self) -> Task:
         """Task for researching content."""
         return Task(
-            name="research_task",
-            config=self.tasks_config["research_task"],
+            name="content_research",
+            config=self.tasks_config["content_research"],
         )
 
     @task
@@ -93,11 +98,11 @@ class ContentAICrew:
         )
 
     @task
-    def final_review_task(self) -> Task:
+    def content_review(self) -> Task:
         """Task for final review of content."""
         return Task(
-            name="final_review_task",
-            config=self.tasks_config["final_review_task"],
+            name="content_review",
+            config=self.tasks_config["content_review"],
         )
 
     @crew
@@ -113,14 +118,14 @@ class ContentAICrew:
 
     def run(self, inputs: Dict) -> Dict:
         """Run the content crew with the given inputs.
-        
+
         Args:
             inputs (Dict): Dictionary containing:
                 - topic: The topic to create content for
                 - description: Description of the topic
                 - keywords: Keywords related to the topic
                 - content_goals: Goals for the content
-                
+
         Returns:
             Dict: Dictionary containing:
                 - title: The title of the content
@@ -139,10 +144,10 @@ class ContentAICrew:
         # Process and structure the results
         return {
             "title": results.get("content_writing_task", {}).get("title", ""),
-            "content": results.get("final_review_task", {}).get("content", ""),
+            "content": results.get("content_review", {}).get("content", ""),
             "metadata": {
-                "research": results.get("research_task", {}),
+                "research": results.get("content_research", {}),
                 "optimization": results.get("optimization_task", {}),
-                "keywords": inputs.get("keywords", [])
-            }
+                "keywords": inputs.get("keywords", []),
+            },
         }

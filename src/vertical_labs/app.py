@@ -1,5 +1,7 @@
 """Streamlit dashboard for CrewAI content generation."""
 
+from typing import List
+
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -25,6 +27,8 @@ def initialize_session_state():
         st.session_state.selected_pitches = []
     if "agent_messages" not in st.session_state:
         st.session_state.agent_messages = []
+    if "terminal_output" not in st.session_state:
+        st.session_state.terminal_output = []
 
 
 def show_step_indicator():
@@ -103,17 +107,15 @@ def publisher_input():
 
     with st.form("publisher_form"):
         publisher_name = st.text_input(
-            "Publisher Name", value="TechCrunch", help="Name of the publisher"
+            "Publisher Name", help="Enter the name of the publisher"
         )
         publisher_url = st.text_input(
-            "Publisher Website",
-            value="https://techcrunch.com",
-            help="URL of the publisher's website",
+            "Publisher Website", help="Enter the URL of the publisher's website"
         )
 
         submitted = st.form_submit_button("Analyze Publisher")
 
-        if submitted:
+        if submitted and publisher_name and publisher_url:
             # Clear previous progress and messages
             st.session_state.progress = {
                 "topics": {"status": "Not Started", "details": []},
@@ -121,6 +123,9 @@ def publisher_input():
                 "pitches": {"status": "Not Started", "details": []},
             }
             st.session_state.agent_messages = []
+
+            # Create a placeholder for terminal output
+            terminal_output = st.empty()
 
             with st.spinner("Analyzing publisher website..."):
                 try:
@@ -130,13 +135,26 @@ def publisher_input():
                         "Starting publisher analysis..."
                     )
 
+                    def split_to_list(s: str) -> List[str]:
+                        if not s:
+                            return [""]
+                        return [item.strip() for item in s.split(",") if item.strip()]
+
+                    # Custom callback for terminal output
+                    def progress_callback(stage: str, status: str, detail: str):
+                        update_progress(stage, status, detail)
+                        # Update terminal output
+                        terminal_output.code(detail)
+
                     results = kickoff(
                         publisher_name=publisher_name,
                         publisher_url=publisher_url,
-                        publisher_categories=[],  # Will be determined by analysis
-                        publisher_audience="",  # Will be determined by analysis
-                        publisher_locations=[],  # Will be determined by analysis
-                        progress_callback=update_progress,
+                        publisher_categories=split_to_list(
+                            "Technology, Startups, AI/ML"
+                        ),
+                        publisher_audience="",
+                        publisher_locations=split_to_list("Global"),
+                        progress_callback=progress_callback,
                     )
 
                     st.session_state.results = results
@@ -145,6 +163,8 @@ def publisher_input():
 
                 except Exception as e:
                     st.error(f"An error occurred: {str(e)}")
+        elif submitted:
+            st.error("Please fill in both Publisher Name and Website URL")
 
 
 def topic_selection():
@@ -226,23 +246,19 @@ def main():
     # Show step indicator
     show_step_indicator()
 
-    # Create two columns: main content and progress
-    col1, col2 = st.columns([2, 1])
+    # Show the appropriate interface based on the current step
+    if st.session_state.step == 1:
+        publisher_input()
+    elif st.session_state.step == 2:
+        topic_selection()
+    elif st.session_state.step == 3:
+        pitch_selection()
+    elif st.session_state.step == 4:
+        content_generation()
 
-    with col1:
-        # Show the appropriate interface based on the current step
-        if st.session_state.step == 1:
-            publisher_input()
-        elif st.session_state.step == 2:
-            topic_selection()
-        elif st.session_state.step == 3:
-            pitch_selection()
-        elif st.session_state.step == 4:
-            content_generation()
-
-    with col2:
-        show_progress()
-        show_agent_conversation()
+    # Show progress and agent conversation below the main content
+    show_progress()
+    show_agent_conversation()
 
 
 if __name__ == "__main__":

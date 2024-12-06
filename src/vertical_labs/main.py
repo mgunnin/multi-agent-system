@@ -32,8 +32,8 @@ class Pitch(BaseModel):
 class PublisherInfo(BaseModel):
     """Publisher information for content analysis and targeting."""
 
-    name: str = Field(description="Name of the publisher")
-    url: str = Field(description="Publisher's website URL")
+    publisher_name: str = Field(description="Name of the publisher")
+    publisher_url: str = Field(description="Publisher's website URL")
     categories: List[str] = Field(
         description="Content categories covered by the publisher"
     )
@@ -251,7 +251,7 @@ def kickoff(
     publisher_categories: List[str],
     publisher_audience: str,
     publisher_locations: List[str],
-    domain: str = "Enterprise AI Solutions",
+    publisher_domain: str = "Enterprise AI Solutions",
     target_audience: str = "B2B audience including CTOs, Tech Leaders, and Developers",
     content_goals: str = """
     Create thought leadership and technical analysis content that:
@@ -263,16 +263,19 @@ def kickoff(
 ):
     """Kickoff the Vertical Labs flow."""
     flow = VerticalLabsFlow(progress_callback=progress_callback)
-    flow.state.domain = domain
+    flow.state.domain = publisher_domain
     flow.state.target_audience = target_audience
     flow.state.content_goals = content_goals
+
+    # Create publisher info for state
     flow.state.publisher = PublisherInfo(
-        name=publisher_name,
-        url=publisher_url,
+        publisher_name=publisher_name,
+        publisher_url=publisher_url,
         categories=publisher_categories,
         audience=publisher_audience,
         locations=publisher_locations,
     )
+
     return flow.kickoff()
 
 
@@ -280,6 +283,21 @@ def plot():
     """Generate a visualization of the flow."""
     flow = VerticalLabsFlow()
     flow.plot()
+
+
+def train():
+    """Train the Vertical Labs system."""
+    inputs = {
+        "Publisher Name": "TechCrunch",
+        "Publisher URL": "https://techcrunch.com",
+        "Publisher Categories": ["Technology", "Startups", "AI/ML", "Enterprise"],
+        "Publisher Audience": "Tech professionals, entrepreneurs, investors",
+        "Publisher Locations": ["Global", "USA", "Europe"],
+    }
+    try:
+        TopicsAICrew.train(inputs)
+    except Exception as e:
+        raise Exception(f"Error training topics crew: {e}")
 
 
 def main():
@@ -295,7 +313,7 @@ def main():
     publisher_locations = ["Global", "USA", "Europe"]
 
     # Example domain and goals
-    domain = "Enterprise AI Solutions"
+    publisher_domain = "Enterprise AI Solutions"
     target_audience = """
     B2B audience including CTOs, Tech Leaders, and Developers
     in Software and AI/ML industries, primarily in USA and Canada.
@@ -317,7 +335,7 @@ def main():
         publisher_categories=publisher_categories,
         publisher_audience=publisher_audience,
         publisher_locations=publisher_locations,
-        domain=domain,
+        publisher_domain=publisher_domain,
         target_audience=target_audience,
         content_goals=content_goals,
     )

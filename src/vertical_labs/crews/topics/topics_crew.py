@@ -1,16 +1,21 @@
 """TopicsAI crew implementation with self-evaluation loop."""
 
 import logging
-from typing import Dict, Optional, Callable
+from typing import Callable, Dict, Optional
 
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
-from crewai_tools import ScrapeWebsiteTool, EXASearchTool
+from crewai_tools import EXASearchTool, ScrapeWebsiteTool, SerperDevTool
+from dotenv import load_dotenv
 
 from vertical_labs.tools.content_tools import (
     ContentDiversityTool,
     EditorialGuidelinesTool,
 )
+
+load_dotenv()
+
+search_tool = SerperDevTool()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -33,8 +38,7 @@ class TopicsAICrew:
 
     def _log_agent_task(self, agent_name: str, task_description: str):
         """Log agent task through progress callback."""
-        message = f"""Agent: {agent_name}
-Task: {task_description}"""
+        message = f"Agent: {agent_name} - Task: {task_description}"
         logger.info(message)
         self._update_progress("In Progress", message)
 
@@ -45,10 +49,7 @@ Task: {task_description}"""
         return Agent(
             name="Website Analysis Expert",
             config=self.agents_config["website_analyzer"],
-            tools=[
-                ScrapeWebsiteTool(),
-                EXASearchTool()
-            ],
+            tools=[ScrapeWebsiteTool, EXASearchTool],
         )
 
     @agent
@@ -58,7 +59,7 @@ Task: {task_description}"""
         return Agent(
             name="Topic Research Specialist",
             config=self.agents_config["topic_researcher"],
-            tools=[EXASearchTool()],
+            tools=[EXASearchTool],
         )
 
     @agent
@@ -78,7 +79,7 @@ Task: {task_description}"""
         return Agent(
             name="Content Strategy Specialist",
             config=self.agents_config["content_strategist"],
-            tools=[EditorialGuidelinesTool()],
+            tools=[EditorialGuidelinesTool],
         )
 
     @agent
@@ -88,7 +89,7 @@ Task: {task_description}"""
         return Agent(
             name="Quality Assurance Specialist",
             config=self.agents_config["quality_assurer"],
-            tools=[ContentDiversityTool()],
+            tools=[ContentDiversityTool],
         )
 
     @agent
@@ -106,12 +107,18 @@ Task: {task_description}"""
         logger.info("Starting website analysis task")
         self._log_agent_task(
             "Website Analysis Expert",
-            "Analyzing publisher website to understand content strategy, audience, and topics."
+            "Analyzing publisher website to understand content strategy, audience, and topics.",
+        )
+
+        # Format the task config with the actual publisher URL
+        task_config = self.tasks_config["website_analysis_task"].copy()
+        task_config["description"] = task_config["description"].format(
+            publisher_url=self.config.get("publisher_url", "")
         )
         return Task(
             name="website_analysis_task",
-            config=self.tasks_config["website_analysis_task"],
-            tools=[ScrapeWebsiteTool(), EXASearchTool()],
+            config=task_config,
+            tools=[ScrapeWebsiteTool, EXASearchTool],
         )
 
     @task
@@ -120,12 +127,12 @@ Task: {task_description}"""
         logger.info("Starting guidelines task")
         self._log_agent_task(
             "Content Strategy Specialist",
-            "Developing content guidelines based on website analysis."
+            "Developing content guidelines based on website analysis.",
         )
         return Task(
             name="guidelines_task",
             config=self.tasks_config["guidelines_task"],
-            tools=[EditorialGuidelinesTool()],
+            tools=[EditorialGuidelinesTool],
         )
 
     @task
@@ -134,12 +141,12 @@ Task: {task_description}"""
         logger.info("Starting trends research task")
         self._log_agent_task(
             "Topic Research Specialist",
-            "Researching current trends and topics in the publisher's domain."
+            "Researching current trends and topics in the publisher's domain.",
         )
         return Task(
             name="trends_research_task",
             config=self.tasks_config["trends_research_task"],
-            tools=[EXASearchTool()],
+            tools=[EXASearchTool],
         )
 
     @task
@@ -148,7 +155,7 @@ Task: {task_description}"""
         logger.info("Starting topic generation task")
         self._log_agent_task(
             "Content Strategy Specialist",
-            "Generating initial topic ideas based on research and guidelines."
+            "Generating initial topic ideas based on research and guidelines.",
         )
         return Task(
             name="topic_generation_task",
@@ -161,12 +168,12 @@ Task: {task_description}"""
         logger.info("Starting diversity check task")
         self._log_agent_task(
             "Quality Assurance Specialist",
-            "Evaluating topic diversity and ensuring content balance."
+            "Evaluating topic diversity and ensuring content balance.",
         )
         return Task(
             name="diversity_check_task",
             config=self.tasks_config["diversity_check_task"],
-            tools=[ContentDiversityTool()],
+            tools=[ContentDiversityTool],
         )
 
     @task
@@ -174,8 +181,7 @@ Task: {task_description}"""
         """Task for final compilation of topics."""
         logger.info("Starting final compilation task")
         self._log_agent_task(
-            "Topic Coordination Manager",
-            "Compiling and prioritizing final topic list."
+            "Topic Coordination Manager", "Compiling and prioritizing final topic list."
         )
         return Task(
             name="final_compilation_task",
@@ -200,10 +206,10 @@ Task: {task_description}"""
         try:
             # Store progress callback if provided
             self.progress_callback = inputs.pop("progress_callback", None)
-            
+
             self._update_progress("In Progress", "Starting publisher analysis")
             logger.info("Publisher analysis starting")
-            
+
             # Update config with inputs
             self.config.update(inputs)
             logger.info("Config updated with inputs")
@@ -212,7 +218,9 @@ Task: {task_description}"""
             logger.info("Getting crew instance")
             crew_instance = self.topics_crew()
 
-            self._update_progress("In Progress", "Analyzing website and generating topics")
+            self._update_progress(
+                "In Progress", "Analyzing website and generating topics"
+            )
             logger.info("Starting crew kickoff")
 
             # Run the crew
